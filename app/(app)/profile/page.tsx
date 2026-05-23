@@ -8,7 +8,7 @@ import { useToast } from "../../lib/toast";
 import { fmtDate, tierLabel } from "../../lib/format";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
-import { Spinner } from "../../components/ui/Spinner";
+import { CardSkeleton, DetailSkeleton } from "../../components/ui/Skeleton";
 import { Toggle } from "../../components/ui/Input";
 import {
   EyeIcon,
@@ -133,8 +133,9 @@ export default function ProfilePage() {
 
   if (loading)
     return (
-      <div className="flex justify-center py-20">
-        <Spinner size={28} />
+      <div className="space-y-6">
+        <DetailSkeleton />
+        <CardSkeleton />
       </div>
     );
 
@@ -832,8 +833,9 @@ function ReviewsTab() {
 
   if (loading)
     return (
-      <div className="flex justify-center py-10">
-        <Spinner />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <CardSkeleton className="h-72" />
+        <CardSkeleton className="h-72" />
       </div>
     );
 
@@ -989,8 +991,9 @@ function PerformanceTab() {
 
   if (loading || !perf)
     return (
-      <div className="flex justify-center py-10">
-        <Spinner />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <CardSkeleton className="h-72" />
+        <CardSkeleton className="h-72" />
       </div>
     );
 
@@ -1297,8 +1300,10 @@ function PromotionTab() {
 
   if (loading || !plans)
     return (
-      <div className="flex justify-center py-10">
-        <Spinner />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <CardSkeleton key={i} className="h-80" />
+        ))}
       </div>
     );
 

@@ -13,7 +13,7 @@ import {
 } from "../lib/format";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
-import { Spinner } from "../components/ui/Spinner";
+import { Skeleton, StatGridSkeleton, CardSkeleton } from "../components/ui/Skeleton";
 import { Badge } from "../components/ui/Badge";
 import {
   TrendIcon,
@@ -122,8 +122,13 @@ export default function DashboardHome() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center py-20">
-        <Spinner size={28} />
+      <div className="px-6 md:px-8 py-8 space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <StatGridSkeleton count={4} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <CardSkeleton className="h-80" />
+          <CardSkeleton className="h-80" />
+        </div>
       </div>
     );
 
@@ -578,7 +583,7 @@ function TierProgress({
         <div className="text-xl font-bold text-slate-900">
           {tierLabel(tier)} Advisor
         </div>
-        <div className="text-xs text-slate-500 mt-1 max-w-[220px]">
+        <div className="text-xs text-slate-500 mt-1 max-w-55">
           You are doing great! Keep maintaining your performance to stay at the
           top.
         </div>
@@ -666,8 +671,16 @@ function ActivityFeed() {
 
   if (loading)
     return (
-      <div className="flex justify-center py-6">
-        <Spinner />
+      <div className="space-y-3 py-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3 w-1/2" />
+              <Skeleton className="h-2.5 w-1/3" />
+            </div>
+          </div>
+        ))}
       </div>
     );
 

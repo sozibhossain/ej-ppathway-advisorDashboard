@@ -17,7 +17,7 @@ export default function AppLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <Topbar />
-      <main className="flex-1 px-6 py-6 max-w-[1600px] w-full mx-auto">
+      <main className="flex-1 px-6 py-6 max-w-400 w-full mx-auto">
         {children}
       </main>
     </div>

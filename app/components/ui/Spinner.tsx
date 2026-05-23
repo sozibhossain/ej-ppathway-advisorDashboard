@@ -26,10 +26,8 @@ export function Spinner({ size = 20, className = "" }: { size?: number; classNam
   );
 }
 
+import { FullPageSkeleton } from "./Skeleton";
+
 export function PageSpinner() {
-  return (
-    <div className="flex items-center justify-center py-20">
-      <Spinner size={32} />
-    </div>
-  );
+  return <FullPageSkeleton />;
 }

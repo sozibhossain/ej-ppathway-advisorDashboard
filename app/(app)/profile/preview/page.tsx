@@ -6,7 +6,7 @@ import { api } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth-context";
 import { fmtCurrency, fmtDate, tierLabel } from "../../../lib/format";
 import { Avatar } from "../../../components/ui/Avatar";
-import { Spinner } from "../../../components/ui/Spinner";
+import { DetailSkeleton } from "../../../components/ui/Skeleton";
 import { Toggle } from "../../../components/ui/Input";
 import {
   ArrowLeftIcon,
@@ -69,12 +69,7 @@ export default function PreviewProfile() {
     };
   }, [user]);
 
-  if (loading || !profile || !u)
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner size={28} />
-      </div>
-    );
+  if (loading || !profile || !u) return <DetailSkeleton />;
 
   const total = reviews.length || 1;
   const counts = [5, 4, 3, 2, 1].map(

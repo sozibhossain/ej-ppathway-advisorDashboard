@@ -5,7 +5,7 @@ import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import { useToast } from "../../lib/toast";
 import { Button } from "../../components/ui/Button";
-import { Spinner } from "../../components/ui/Spinner";
+import { FormSkeleton } from "../../components/ui/Skeleton";
 import { Toggle } from "../../components/ui/Input";
 import { ConfirmDialog } from "../../components/ui/Modal";
 import {
@@ -152,8 +152,8 @@ export default function SettingsPage() {
 
   if (loading)
     return (
-      <div className="flex justify-center py-20">
-        <Spinner size={28} />
+      <div className="space-y-6">
+        <FormSkeleton rows={6} />
       </div>
     );
 

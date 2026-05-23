@@ -7,7 +7,7 @@ import { useToast } from "../../../../lib/toast";
 import { fmtCurrency, fmtDuration } from "../../../../lib/format";
 import { Avatar } from "../../../../components/ui/Avatar";
 import { Button } from "../../../../components/ui/Button";
-import { Spinner } from "../../../../components/ui/Spinner";
+import { CardSkeleton } from "../../../../components/ui/Skeleton";
 import { Modal } from "../../../../components/ui/Modal";
 import {
   CameraIcon,
@@ -224,12 +224,7 @@ export default function LiveSessionPage() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner size={28} />
-      </div>
-    );
+  if (loading) return <CardSkeleton className="h-96" />;
 
   if (!session)
     return (

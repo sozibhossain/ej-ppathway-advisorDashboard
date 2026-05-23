@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../lib/api";
 import { useToast } from "../../lib/toast";
-import { Spinner } from "../../components/ui/Spinner";
+import { ListSkeleton } from "../../components/ui/Skeleton";
 import { Button } from "../../components/ui/Button";
 import {
   ArrowLeftIcon,
@@ -110,9 +110,7 @@ export default function NotificationsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Spinner size={28} />
-        </div>
+        <ListSkeleton count={6} />
       ) : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-sm text-slate-500">
           You have no notifications.

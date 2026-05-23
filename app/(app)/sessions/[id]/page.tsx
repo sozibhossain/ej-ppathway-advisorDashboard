@@ -12,7 +12,7 @@ import {
 } from "../../../lib/format";
 import { Avatar } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
-import { Spinner } from "../../../components/ui/Spinner";
+import { DetailSkeleton } from "../../../components/ui/Skeleton";
 import { Badge } from "../../../components/ui/Badge";
 import {
   ArrowLeftIcon,
@@ -72,12 +72,7 @@ export default function SessionDetailPage() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner size={28} />
-      </div>
-    );
+  if (loading) return <DetailSkeleton />;
 
   if (!session)
     return (

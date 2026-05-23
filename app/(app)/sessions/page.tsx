@@ -12,7 +12,7 @@ import {
 } from "../../lib/format";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
-import { Spinner } from "../../components/ui/Spinner";
+import { Skeleton, StatGridSkeleton, CardSkeleton } from "../../components/ui/Skeleton";
 import { ConfirmDialog } from "../../components/ui/Modal";
 import {
   ChevronRightIcon,
@@ -237,8 +237,9 @@ export default function SessionsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <Spinner size={28} />
+      <div className="space-y-6">
+        <StatGridSkeleton count={4} />
+        <CardSkeleton className="h-64" />
       </div>
     );
   }
@@ -326,7 +327,7 @@ export default function SessionsPage() {
               View All
             </Link>
           </div>
-          <div className="space-y-2 max-h-[300px] overflow-y-auto thin-scroll">
+          <div className="space-y-2 max-h-75 overflow-y-auto thin-scroll">
             {overviewItems.length === 0 ? (
               <div className="text-sm text-slate-500 text-center py-8">
                 Nothing scheduled
@@ -457,11 +458,15 @@ export default function SessionsPage() {
             </thead>
             <tbody>
               {tabLoading ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-10">
-                    <Spinner />
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, r) => (
+                  <tr key={r} className="border-b border-slate-50 last:border-0">
+                    {Array.from({ length: 8 }).map((_, c) => (
+                      <td key={c} className="px-5 py-4">
+                        <Skeleton className="h-3 w-full max-w-25" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ) : items.length === 0 ? (
                 <tr>
                   <td
@@ -534,7 +539,7 @@ export default function SessionsPage() {
                         </>
                       )}
                       {activeTab === "cancelled" && (
-                        <td className="px-3 py-3 text-slate-600 max-w-[260px] truncate">
+                        <td className="px-3 py-3 text-slate-600 max-w-65 truncate">
                           {s.cancelReason || "—"}
                         </td>
                       )}

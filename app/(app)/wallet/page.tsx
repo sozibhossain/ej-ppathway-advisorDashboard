@@ -12,7 +12,7 @@ import {
 } from "../../lib/format";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
-import { Spinner } from "../../components/ui/Spinner";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal, ConfirmDialog } from "../../components/ui/Modal";
 import {
   TrendIcon,
@@ -313,8 +313,14 @@ td.r{font-weight:600;text-align:right}
           </div>
 
           {loadingOverview ? (
-            <div className="flex items-center justify-center h-40">
-              <Spinner />
+            <div className="h-56 flex items-end gap-3 px-3">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <Skeleton
+                  key={i}
+                  className="flex-1 rounded-t-lg"
+                  style={{ height: `${30 + ((i * 13) % 60)}%` }}
+                />
+              ))}
             </div>
           ) : (
             <div className="h-56 flex items-end gap-3 px-3">
@@ -495,11 +501,15 @@ td.r{font-weight:600;text-align:right}
             </thead>
             <tbody>
               {loadingTab ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-10">
-                    <Spinner />
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, r) => (
+                  <tr key={r} className="border-b border-slate-50 last:border-0">
+                    {Array.from({ length: 7 }).map((_, c) => (
+                      <td key={c} className="px-5 py-4">
+                        <Skeleton className="h-3 w-full max-w-25" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ) : items.length === 0 ? (
                 <tr>
                   <td

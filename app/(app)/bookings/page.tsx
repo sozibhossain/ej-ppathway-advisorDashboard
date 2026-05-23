@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { fmtDate, fmtMinutes, fmtTime } from "../../lib/format";
 import { Avatar } from "../../components/ui/Avatar";
-import { Spinner } from "../../components/ui/Spinner";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { Badge } from "../../components/ui/Badge";
 import {
   ChevronLeftIcon,
@@ -161,8 +161,10 @@ export default function BookingsPage() {
           ))}
         </div>
         {loading ? (
-          <div className="flex justify-center py-10">
-            <Spinner />
+          <div className="grid grid-cols-7 gap-2">
+            {Array.from({ length: 35 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-lg" />
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-7 gap-2">
@@ -176,7 +178,7 @@ export default function BookingsPage() {
               return (
                 <div
                   key={i}
-                  className={`min-h-[88px] rounded-xl border p-2 transition-colors ${
+                  className={`min-h-22 rounded-xl border p-2 transition-colors ${
                     isToday
                       ? "bg-[#0a7a90] text-white border-[#0a7a90]"
                       : has

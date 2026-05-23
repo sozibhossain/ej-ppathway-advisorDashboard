@@ -176,7 +176,7 @@ export function Topbar() {
             >
               <Avatar name={user?.name} src={user?.profilePhoto} size={36} />
               <div className="hidden sm:block text-left leading-tight">
-                <div className="text-sm font-semibold text-slate-900 truncate max-w-[120px]">
+                <div className="text-sm font-semibold text-slate-900 truncate max-w-30">
                   {user?.name || "Advisor"}
                 </div>
               </div>
