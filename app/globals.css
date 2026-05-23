@@ -35,6 +35,10 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* hide scrollbar but allow scrolling (for horizontal chip rows on mobile) */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* nice scrollbar */
 .thin-scroll::-webkit-scrollbar {
   width: 8px;

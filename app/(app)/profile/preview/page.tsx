@@ -142,7 +142,7 @@ export default function PreviewProfile() {
 
           <div className="bg-white rounded-2xl border border-slate-200 p-5">
             <h3 className="font-bold text-slate-900 mb-3">Availability</h3>
-            <div className="bg-emerald-50/50 rounded-xl p-3 flex items-center justify-between">
+            <div className="bg-slate-50 rounded-xl p-3 flex items-center justify-between">
               <div>
                 <div className="font-semibold text-slate-900">
                   Auto Online Mode

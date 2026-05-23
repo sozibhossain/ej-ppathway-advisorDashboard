@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../lib/auth-context";
@@ -85,16 +86,16 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
-      <div className="px-6 h-16 flex items-center gap-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div>
-            <div className="text-base font-semibold leading-none text-slate-900">
-              Prophetic
-            </div>
-            <div className="text-[10px] text-[#0a7a90] tracking-[0.25em] mt-0.5">
-              PATHWAY
-            </div>
-          </div>
+      <div className="px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-3 sm:gap-4">
+        <Link href="/" className="flex items-center shrink-0" aria-label="Prophetic Pathway">
+          <Image
+            src="/logo.png"
+            alt="Prophetic Pathway"
+            width={160}
+            height={48}
+            priority
+            className="h-10 sm:h-12 w-auto object-contain"
+          />
         </Link>
 
         <nav className="flex-1 hidden md:flex items-center justify-center gap-2">
@@ -118,7 +119,7 @@ export function Topbar() {
           })}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 ml-auto md:ml-0">
           <div
             className={`hidden sm:flex items-center gap-2 h-10 px-3 rounded-full text-xs font-semibold ${
               online
@@ -149,7 +150,7 @@ export function Topbar() {
           >
             <BellIcon size={20} />
             {unread > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center px-1">
+              <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center px-1">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
@@ -224,7 +225,7 @@ export function Topbar() {
         </div>
       </div>
 
-      <div className="md:hidden px-4 pb-3 flex gap-2 overflow-x-auto">
+      <div className="md:hidden px-4 sm:px-6 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
         {NAV.map((n) => {
           const Icon = n.icon;
           const active = isActive(n.href, n.exact);

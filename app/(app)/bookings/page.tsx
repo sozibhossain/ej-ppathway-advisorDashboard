@@ -128,8 +128,8 @@ export default function BookingsPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-6">
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
           <h2 className="text-lg font-bold text-slate-900">
             {monthName(month)} {year}
           </h2>
@@ -153,7 +153,7 @@ export default function BookingsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-2 text-xs font-semibold text-slate-500 mb-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-[10px] sm:text-xs font-semibold text-slate-500 mb-2">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
             <div key={d} className="text-center py-2">
               {d}
@@ -161,13 +161,13 @@ export default function BookingsPage() {
           ))}
         </div>
         {loading ? (
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {Array.from({ length: 35 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-lg" />
+              <Skeleton key={i} className="h-16 sm:h-24 rounded-lg" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {grid.map((c, i) => {
               const isToday =
                 c.day === today.getDate() &&
@@ -178,7 +178,7 @@ export default function BookingsPage() {
               return (
                 <div
                   key={i}
-                  className={`min-h-22 rounded-xl border p-2 transition-colors ${
+                  className={`min-h-16 sm:min-h-22 rounded-lg sm:rounded-xl border p-1.5 sm:p-2 transition-colors ${
                     isToday
                       ? "bg-[#0a7a90] text-white border-[#0a7a90]"
                       : has

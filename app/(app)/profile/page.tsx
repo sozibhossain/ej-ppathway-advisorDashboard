@@ -26,6 +26,7 @@ import {
   MailIcon,
   PhoneIcon,
   MapPinIcon,
+  ChevronDownIcon,
 } from "../../components/Icons";
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type {
@@ -170,10 +171,10 @@ export default function ProfilePage() {
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`px-4 h-10 rounded-lg text-sm font-medium whitespace-nowrap ${
+              className={`flex-1 px-4 h-11 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                 tab === t.key
-                  ? "bg-[#0a7a90] text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-[#0a7a90] text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               {t.label}
@@ -411,19 +412,23 @@ function ExpertiseTab({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5">
-      <h3 className="font-bold text-slate-900 mb-4">Expertise & Categories</h3>
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">
+      <h3 className="font-bold text-slate-900 mb-5">Expertise & Categories</h3>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div>
-          <h4 className="text-sm font-semibold text-slate-900 mb-3">
+          <h4 className="text-base font-semibold text-slate-900 mb-3">
             Skills/Expertise
           </h4>
-          <div className="flex gap-2 mb-3">
+          <div className="relative mb-3">
+            <UserIcon
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
             <input
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
-              placeholder="Choose Skills & Expertise"
-              className="flex-1 h-11 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
+              placeholder="Choose Skills & Experties"
+              className="w-full h-11 pl-10 pr-10 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -431,6 +436,10 @@ function ExpertiseTab({
                   setSkillInput("");
                 }
               }}
+            />
+            <ChevronDownIcon
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
             />
           </div>
           <div className="space-y-2">
@@ -467,13 +476,17 @@ function ExpertiseTab({
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold text-slate-900 mb-3">Style</h4>
-          <div className="flex gap-2 mb-3">
+          <h4 className="text-base font-semibold text-slate-900 mb-3">Style</h4>
+          <div className="relative mb-3">
+            <UserIcon
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
             <input
               value={styleInput}
               onChange={(e) => setStyleInput(e.target.value)}
               placeholder="Choose Style"
-              className="flex-1 h-11 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
+              className="w-full h-11 pl-10 pr-10 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -481,6 +494,10 @@ function ExpertiseTab({
                   setStyleInput("");
                 }
               }}
+            />
+            <ChevronDownIcon
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
             />
           </div>
           <div className="space-y-2">
@@ -517,15 +534,26 @@ function ExpertiseTab({
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold text-slate-900 mb-3">
+          <h4 className="text-base font-semibold text-slate-900 mb-3">
             Languages
           </h4>
-          <div className="flex gap-2 mb-3">
+          <div className="relative mb-3">
+            <UserIcon
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
             <input
               value={langInput}
               onChange={(e) => setLangInput(e.target.value)}
               placeholder="Type your language"
-              className="flex-1 h-11 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addItem("languages", langInput);
+                  setLangInput("");
+                }
+              }}
+              className="w-full h-11 pl-10 pr-20 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
             />
             <button
               type="button"
@@ -533,7 +561,7 @@ function ExpertiseTab({
                 addItem("languages", langInput);
                 setLangInput("");
               }}
-              className="px-4 rounded-lg bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 px-4 rounded-md bg-slate-100 text-slate-500 text-xs font-semibold hover:bg-slate-200"
             >
               Add
             </button>
@@ -647,12 +675,14 @@ function PricingTab({
   ];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-8">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-8">
       <div>
-        <h3 className="font-bold text-slate-900 mb-2">
+        <h3 className="font-bold text-slate-900 mb-4">
           Pricing & Availabilities
         </h3>
-        <h4 className="text-sm text-slate-500 mt-2 mb-3">Price per minute</h4>
+        <h4 className="text-sm font-semibold text-slate-700 mb-3">
+          Price per minutes
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <PricingInput
             label="Chat Pricing"
@@ -683,10 +713,10 @@ function PricingTab({
 
       <div>
         <h3 className="font-bold text-slate-900 mb-3">Availability</h3>
-        <div className="bg-emerald-50/50 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between gap-4">
           <div>
             <div className="font-semibold text-slate-900">Auto Online Mode</div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-slate-500 mt-0.5">
               Automatically go online during your scheduled hours
             </div>
           </div>
@@ -699,7 +729,7 @@ function PricingTab({
 
       <div>
         <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-          📅 Weekly Schedule
+          <CalendarIcon /> Weekly Schedule
         </h3>
         <div className="space-y-2">
           {days.map((d) => {
@@ -711,40 +741,36 @@ function PricingTab({
             return (
               <div
                 key={d}
-                className="bg-slate-50 rounded-xl p-3 flex items-center gap-4 flex-wrap"
+                className="bg-slate-50 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap"
               >
-                <div className="font-semibold text-slate-900 capitalize w-28">
+                <div className="font-semibold text-slate-900 capitalize w-24 sm:w-28">
                   {d}
                 </div>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="time"
+                  <TimeInput
                     value={sched.from}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       setP({
                         ...p,
                         weeklySchedule: {
                           ...(p.weeklySchedule || {}),
-                          [d]: { ...sched, from: e.target.value },
+                          [d]: { ...sched, from: v },
                         },
                       })
                     }
-                    className="h-9 px-2 rounded-lg border border-slate-200 text-sm"
                   />
                   <span className="text-xs text-slate-500">To</span>
-                  <input
-                    type="time"
+                  <TimeInput
                     value={sched.to}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       setP({
                         ...p,
                         weeklySchedule: {
                           ...(p.weeklySchedule || {}),
-                          [d]: { ...sched, to: e.target.value },
+                          [d]: { ...sched, to: v },
                         },
                       })
                     }
-                    className="h-9 px-2 rounded-lg border border-slate-200 text-sm"
                   />
                 </div>
                 <div className="ml-auto">
@@ -767,6 +793,47 @@ function PricingTab({
         </div>
       </div>
     </div>
+  );
+}
+
+function TimeInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <input
+        type="time"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:border-[#0a7a90] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+      />
+      <ClockIcon
+        size={14}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+      />
+    </div>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
   );
 }
 
@@ -846,7 +913,8 @@ function ReviewsTab() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-6">
+      <h2 className="text-xl font-bold text-slate-900">Reviews & Ratings</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h3 className="font-semibold text-slate-900 mb-3">Average Rating</h3>
@@ -1009,7 +1077,8 @@ function PerformanceTab() {
   const breakdown = (perf.ratingBreakdown || {}) as Record<string, number>;
 
   return (
-    <div className="space-y-6">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-6">
+      <h2 className="text-xl font-bold text-slate-900">Performance & Tier</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <PerfCard
           tone="amber"
@@ -1030,7 +1099,7 @@ function PerformanceTab() {
           value={`${Math.round((perf.avgResponseSec || 60) / 60)}m`}
         />
         <PerfCard
-          tone="emerald"
+          tone="teal"
           icon={<TrendIcon size={20} />}
           label="Refund Rate"
           value={`${perf.refundRate || 0}%`}
@@ -1211,22 +1280,42 @@ function PerfCard({
   label,
   value,
 }: {
-  tone: "amber" | "emerald" | "violet";
+  tone: "amber" | "emerald" | "violet" | "teal";
   icon: React.ReactNode;
   label: string;
   value: string;
 }) {
-  const cls: Record<string, string> = {
-    amber: "bg-amber-50 border-amber-100",
-    emerald: "bg-emerald-50 border-emerald-100",
-    violet: "bg-violet-50 border-violet-100",
+  const cls: Record<string, { card: string; iconBg: string; iconColor: string }> = {
+    amber: {
+      card: "bg-amber-50 border-amber-200",
+      iconBg: "bg-amber-100",
+      iconColor: "text-amber-500",
+    },
+    emerald: {
+      card: "bg-emerald-50 border-emerald-200",
+      iconBg: "bg-emerald-100",
+      iconColor: "text-emerald-600",
+    },
+    violet: {
+      card: "bg-violet-50 border-violet-200",
+      iconBg: "bg-violet-100",
+      iconColor: "text-violet-600",
+    },
+    teal: {
+      card: "bg-teal-50 border-teal-200",
+      iconBg: "bg-teal-100",
+      iconColor: "text-teal-600",
+    },
   };
+  const c = cls[tone];
   return (
-    <div className={`rounded-2xl border p-4 ${cls[tone]}`}>
-      <div className="h-9 w-9 rounded-lg bg-white text-amber-500 flex items-center justify-center">
+    <div className={`rounded-2xl border-2 p-5 ${c.card}`}>
+      <div
+        className={`h-10 w-10 rounded-lg ${c.iconBg} ${c.iconColor} flex items-center justify-center`}
+      >
         {icon}
       </div>
-      <div className="text-[10px] uppercase font-semibold text-slate-500 mt-3 tracking-wider">
+      <div className="text-[11px] uppercase font-semibold text-slate-500 mt-4 tracking-wider">
         {label}
       </div>
       <div className="text-3xl font-bold text-slate-900 mt-1">{value}</div>
@@ -1307,10 +1396,52 @@ function PromotionTab() {
       </div>
     );
 
+  const impPerDay = (k: "basic" | "pro" | "premium") => {
+    const v = plans?.[k]?.impressionsPerDay;
+    return typeof v === "number" ? v : Number(v) || 0;
+  };
   const planCards = [
-    { key: "basic", title: "Basic Boost", price: plans.basic?.price ?? 29, days: plans.basic?.days ?? 7, tone: "emerald", features: ["2x profile visibility", "100 impressions/day", "Standard placement"] },
-    { key: "pro", title: "Pro Featured", price: plans.pro?.price ?? 79, days: plans.pro?.days ?? 14, tone: "violet", features: ["5x profile visibility", "500 impressions/day", "Featured in category", "Top of search results"] },
-    { key: "premium", title: "Premium Spotlight", price: plans.premium?.price ?? 149, days: plans.premium?.days ?? 30, tone: "amber", features: ["10x profile visibility", "Unlimited impressions", "Homepage featured", "Top search placement", "Social media promotion"] },
+    {
+      key: "basic",
+      title: "Basic Boost",
+      price: plans.basic?.price ?? 29,
+      days: plans.basic?.days ?? 7,
+      tone: "emerald",
+      features: [
+        "2x profile visibility",
+        `${impPerDay("basic") || 100} impressions/day`,
+        "Standard placement",
+      ],
+    },
+    {
+      key: "pro",
+      title: "Pro Featured",
+      price: plans.pro?.price ?? 79,
+      days: plans.pro?.days ?? 14,
+      tone: "violet",
+      features: [
+        "5x profile visibility",
+        `${impPerDay("pro") || 500} impressions/day`,
+        "Featured in category",
+        "Top of search results",
+      ],
+    },
+    {
+      key: "premium",
+      title: "Premium Spotlight",
+      price: plans.premium?.price ?? 149,
+      days: plans.premium?.days ?? 30,
+      tone: "amber",
+      features: [
+        "10x profile visibility",
+        impPerDay("premium") > 0
+          ? `${impPerDay("premium")} impressions/day`
+          : "Unlimited impressions",
+        "Homepage featured",
+        "Top search placement",
+        "Social media promotion",
+      ],
+    },
   ];
 
   return (
@@ -1323,86 +1454,108 @@ function PromotionTab() {
         </p>
       </div>
 
-      {active && (
-        <div className="bg-violet-50 border border-violet-100 rounded-2xl p-5">
-          <div className="flex items-start justify-between mb-3">
-            <h3 className="font-bold text-slate-900">Active Promotion</h3>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-              Active
-            </span>
+      {active && (() => {
+        const planCfg = plans?.[active.plan as keyof PromotionPlans];
+        const perDay = Number(planCfg?.impressionsPerDay) || 0;
+        const cap = perDay > 0 ? perDay * (planCfg?.days || 0) : 0;
+        const used = active.impressions || 0;
+        const pct = cap > 0 ? Math.min(100, (used / cap) * 100) : 50;
+        return (
+          <div className="bg-violet-50 border-2 border-violet-300 rounded-2xl p-5">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="font-bold text-slate-900">Active Promotion</h3>
+              <span className="px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                Active
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+              <div>
+                <div className="text-xs text-slate-500 mb-1">Plan</div>
+                <div className="font-bold text-slate-900">
+                  {active.plan === "pro"
+                    ? "Pro Featured"
+                    : active.plan === "premium"
+                      ? "Premium Spotlight"
+                      : active.plan === "basic"
+                        ? "Basic Boost"
+                        : tierLabel(active.plan)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 mb-1">Expires</div>
+                <div className="font-bold text-slate-900">
+                  {fmtDate(active.expiresAt)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 mb-1">Impressions</div>
+                <div className="font-bold text-slate-900">
+                  {used.toLocaleString()}
+                  {cap > 0 ? ` / ${cap.toLocaleString()}` : ""}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 mb-1">New Clients</div>
+                <div className="font-bold text-slate-900">
+                  +{active.newClients || 0}
+                </div>
+              </div>
+            </div>
+            <div className="h-2 bg-white rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#0a7a90] transition-all"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <div className="text-xs text-slate-500">Plan</div>
-              <div className="font-bold text-slate-900 capitalize">
-                {active.plan === "pro" ? "Pro Featured" : tierLabel(active.plan)}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">Expires</div>
-              <div className="font-bold text-slate-900">
-                {fmtDate(active.expiresAt)}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">Impressions</div>
-              <div className="font-bold text-slate-900">
-                {active.impressions || 0}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">New Clients</div>
-              <div className="font-bold text-slate-900">
-                +{active.newClients || 0}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {planCards.map((p) => {
           const isActive = active?.plan === p.key;
           const isPopular = p.key === "pro";
           return (
             <div
               key={p.key}
-              className={`relative rounded-2xl border p-5 ${
+              className={`relative rounded-2xl border-2 p-6 flex flex-col ${
                 p.tone === "violet"
-                  ? "bg-violet-50 border-violet-200"
+                  ? "bg-violet-100 border-violet-300"
                   : p.tone === "amber"
                     ? "bg-amber-50 border-amber-200"
                     : "bg-white border-slate-200"
               }`}
             >
               {isPopular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-violet-700 text-white text-[10px] font-bold uppercase rounded-full px-3 py-1 inline-flex items-center gap-1">
-                  <CrownIcon size={10} />
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-violet-700 text-white text-[11px] font-semibold rounded-full px-3 py-1 inline-flex items-center gap-1 shadow-sm">
+                  <CrownIcon size={12} />
                   Most Popular
                 </span>
               )}
               <div
-                className={`h-12 w-12 rounded-xl flex items-center justify-center mb-3 ${
+                className={`h-14 w-14 rounded-xl flex items-center justify-center mb-5 ${
                   p.tone === "violet"
                     ? "bg-violet-200 text-violet-700"
                     : p.tone === "amber"
-                      ? "bg-amber-200 text-amber-700"
-                      : "bg-emerald-200 text-emerald-700"
+                      ? "bg-amber-200 text-amber-600"
+                      : "bg-emerald-100 text-emerald-600"
                 }`}
               >
-                <ZapIcon size={22} />
+                <ZapIcon size={26} />
               </div>
-              <div className="text-xl font-bold text-slate-900">{p.title}</div>
-              <div className="mt-2 mb-3">
-                <span className="text-3xl font-bold text-slate-900">
+              <div className="text-2xl font-bold text-slate-900">{p.title}</div>
+              <div className="mt-3 mb-5">
+                <span className="text-4xl font-bold text-slate-900">
                   ${p.price}
                 </span>
-                <span className="text-xs text-slate-500">/{p.days} days</span>
+                <span className="text-xs text-slate-500 ml-1">
+                  /{p.days} days
+                </span>
               </div>
-              <ul className="text-sm text-slate-700 space-y-1.5 mb-4">
+              <ul className="text-sm text-slate-700 space-y-2 mb-6">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-500 font-bold">✓</span>
                     {f}
                   </li>
                 ))}
@@ -1411,13 +1564,15 @@ function PromotionTab() {
                 type="button"
                 disabled={!!activating || isActive}
                 onClick={() => activate(p.key)}
-                className={`w-full h-11 rounded-lg font-semibold text-sm ${
-                  p.key === "pro"
-                    ? "bg-[#0a7a90] text-white hover:bg-[#076377]"
-                    : p.key === "premium"
-                      ? "bg-white text-amber-700 border border-amber-300 hover:bg-amber-100"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                } disabled:opacity-50`}
+                className={`mt-auto w-full h-12 rounded-lg font-semibold text-sm transition-colors ${
+                  isActive
+                    ? "bg-emerald-600 text-white"
+                    : p.key === "pro"
+                      ? "bg-[#0a7a90] text-white hover:bg-[#076377]"
+                      : p.key === "premium"
+                        ? "bg-white text-[#0a7a90] border border-amber-300 hover:bg-amber-100"
+                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                } disabled:opacity-60`}
               >
                 {isActive
                   ? "Active"
