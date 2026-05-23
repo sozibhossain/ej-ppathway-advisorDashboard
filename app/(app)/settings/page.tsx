@@ -9,10 +9,7 @@ import { FormSkeleton } from "../../components/ui/Skeleton";
 import { Toggle } from "../../components/ui/Input";
 import { ConfirmDialog } from "../../components/ui/Modal";
 import {
-  UserIcon,
   LockIcon,
-  BellIcon,
-  WalletIcon,
   MailIcon,
   PhoneIcon,
   ClockIcon,
@@ -161,22 +158,19 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
           <p className="text-sm text-slate-500 mt-1">
             Manage your account settings and preferences
           </p>
         </div>
         <Button onClick={saveAccount} loading={savingAccount}>
-          Save All Changes
+          Save Changes
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Section
-            title="Account Information"
-            icon={<UserIcon size={18} />}
-          >
+          <Section title="Account Information">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormInput
                 label="Email Address"
@@ -196,7 +190,7 @@ export default function SettingsPage() {
                 label="Language"
                 value={language}
                 onChange={setLanguage}
-                icon={<span className="text-base">🌐</span>}
+                icon={<GlobeIcon />}
               />
               <FormInput
                 label="Time Zone"
@@ -208,7 +202,7 @@ export default function SettingsPage() {
             </div>
           </Section>
 
-          <Section title="Change Password" icon={<LockIcon size={18} />}>
+          <Section title="Change Password">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormInput
                 label="Current password"
@@ -235,7 +229,7 @@ export default function SettingsPage() {
                 placeholder="••••••••"
               />
             </div>
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center justify-between flex-wrap gap-3 mt-5">
               <button
                 type="button"
                 onClick={() => setShowPwd((s) => !s)}
@@ -250,38 +244,40 @@ export default function SettingsPage() {
             </div>
           </Section>
 
-          <Section
-            title="Notification Preferences"
-            icon={<BellIcon size={18} />}
-          >
+          <Section title="Notification Preferences">
             <div className="space-y-3">
               <PrefRow
                 label="Email Notifications"
+                description="Receive updates and alerts via email"
                 checked={!!prefs.email}
                 onChange={(v) => setPrefs({ ...prefs, email: v })}
               />
               <PrefRow
                 label="New session requests"
+                description="Alert me when a client books a session"
                 checked={!!prefs.newSessions}
                 onChange={(v) => setPrefs({ ...prefs, newSessions: v })}
               />
               <PrefRow
                 label="New messages"
+                description="Notify me of new chats from clients"
                 checked={!!prefs.newMessages}
                 onChange={(v) => setPrefs({ ...prefs, newMessages: v })}
               />
               <PrefRow
                 label="Payment updates"
+                description="Notify me about payouts and earnings"
                 checked={!!prefs.paymentUpdates}
                 onChange={(v) => setPrefs({ ...prefs, paymentUpdates: v })}
               />
               <PrefRow
                 label="Push Notifications"
+                description="Real-time push alerts in your browser"
                 checked={!!prefs.push}
                 onChange={(v) => setPrefs({ ...prefs, push: v })}
               />
             </div>
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-end mt-5">
               <Button onClick={savePrefs} loading={savingPrefs}>
                 Save Preferences
               </Button>
@@ -290,11 +286,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-6">
-          <Section
-            title="Payment Method"
-            icon={<WalletIcon size={18} />}
-            noPad
-          >
+          <Section title="Payment Method" noPad>
             <div className="rounded-xl bg-gradient-to-br from-[#0a7a90] to-[#063e4d] text-white p-5 m-5 mb-3">
               <div className="flex items-start justify-between">
                 <div>
@@ -308,7 +300,7 @@ export default function SettingsPage() {
                       : "Pending verification"}
                   </div>
                 </div>
-                <span className="text-3xl">💳</span>
+                <CardIcon />
               </div>
             </div>
             <div className="px-5 pb-5">
@@ -318,28 +310,30 @@ export default function SettingsPage() {
             </div>
           </Section>
 
-          <Section title="Quick Actions" icon={<UserIcon size={18} />}>
-            <button
-              type="button"
-              onClick={downloadData}
-              className="w-full h-11 rounded-lg border border-slate-200 hover:bg-slate-50 text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
-            >
-              <DownloadIcon size={14} />
-              Download Account Data
-            </button>
-            <button
-              type="button"
-              className="w-full h-11 rounded-lg border border-slate-200 hover:bg-slate-50 text-sm font-medium text-slate-700 flex items-center justify-center gap-2 mt-2"
-            >
-              Privacy Settings
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmDeact(true)}
-              className="w-full h-11 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-sm font-medium flex items-center justify-center gap-2 mt-2"
-            >
-              Deactivate Account
-            </button>
+          <Section title="Quick Actions">
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={downloadData}
+                className="w-full h-11 rounded-lg border border-slate-200 hover:bg-slate-50 text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
+              >
+                <DownloadIcon size={14} />
+                Download Account Data
+              </button>
+              <button
+                type="button"
+                className="w-full h-11 rounded-lg border border-slate-200 hover:bg-slate-50 text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
+              >
+                Privacy Settings
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDeact(true)}
+                className="w-full h-11 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-sm font-medium flex items-center justify-center gap-2"
+              >
+                Deactivate Account
+              </button>
+            </div>
           </Section>
         </div>
       </div>
@@ -360,38 +354,42 @@ export default function SettingsPage() {
 
 function Section({
   title,
-  icon,
   children,
   noPad,
 }: {
   title: string;
-  icon: React.ReactNode;
   children: React.ReactNode;
   noPad?: boolean;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2 font-bold text-slate-900">
-        <span className="text-[#0a7a90]">{icon}</span>
-        {title}
+      <div className="px-5 sm:px-6 pt-5 pb-3">
+        <h2 className="text-base font-bold text-slate-900">{title}</h2>
       </div>
-      {noPad ? children : <div className="p-5">{children}</div>}
+      {noPad ? children : <div className="px-5 sm:px-6 pb-5">{children}</div>}
     </div>
   );
 }
 
 function PrefRow({
   label,
+  description,
   checked,
   onChange,
 }: {
   label: string;
+  description?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-      <span className="text-sm text-slate-700">{label}</span>
+    <div className="bg-slate-50 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <div className="font-semibold text-slate-900 text-sm">{label}</div>
+        {description ? (
+          <div className="text-xs text-slate-500 mt-0.5">{description}</div>
+        ) : null}
+      </div>
       <Toggle checked={checked} onChange={onChange} />
     </div>
   );
@@ -437,5 +435,41 @@ function FormInput({
         />
       </div>
     </label>
+  );
+}
+
+function GlobeIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" />
+    </svg>
+  );
+}
+
+function CardIcon() {
+  return (
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20" />
+    </svg>
   );
 }

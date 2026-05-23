@@ -4,31 +4,30 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../lib/api";
 import { useToast } from "../../lib/toast";
-import { ListSkeleton } from "../../components/ui/Skeleton";
-import { Button } from "../../components/ui/Button";
-import {
-  ArrowLeftIcon,
-  ChatIcon,
-  StarIcon,
-  BellIcon,
-  TrashIcon,
-} from "../../components/Icons";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { ChevronLeftIcon, TrashIcon } from "../../components/Icons";
 import type { NotificationDoc } from "../../lib/types";
 
-const colorFor = (type: string) => {
-  if (type.includes("review"))
-    return "border-amber-400 bg-amber-50/40 text-amber-700";
-  if (type.includes("booking") || type.includes("session"))
-    return "border-emerald-400 bg-emerald-50/40 text-emerald-700";
-  if (type.includes("session_request"))
-    return "border-sky-400 bg-sky-50/40 text-sky-700";
-  return "border-slate-300 bg-slate-50/40 text-slate-700";
+const stripeFor = (type: string) => {
+  if (type.includes("review")) return "before:bg-amber-400";
+  if (type.includes("booking")) return "before:bg-emerald-500";
+  if (type.includes("session_request") || type.includes("session"))
+    return "before:bg-[#0a7a90]";
+  return "before:bg-slate-300";
 };
 
-const iconFor = (type: string) => {
-  if (type.includes("review")) return <StarIcon size={14} filled />;
-  if (type.includes("booking") || type.includes("session")) return <ChatIcon size={14} />;
-  return <BellIcon size={14} />;
+const fmtTime = (iso: string) => {
+  const d = new Date(iso);
+  const now = Date.now();
+  const diffMs = now - d.getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return "Now";
+  if (min < 60) return `${min} minute${min === 1 ? "" : "s"} ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day} day${day === 1 ? "" : "s"} ago`;
+  return d.toLocaleString();
 };
 
 export default function NotificationsPage() {
@@ -76,81 +75,71 @@ export default function NotificationsPage() {
     }
   };
 
-  const markAll = async () => {
-    try {
-      await api.post("/notifications/read-all");
-      setItems((s) => s.map((n) => ({ ...n, read: true })));
-      toast.success("All notifications marked as read");
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Action failed");
-    }
-  };
-
   return (
-    <div className="space-y-4 max-w-5xl mx-auto">
-      <div className="flex items-center gap-3">
+    <div className="w-full space-y-6">
+      <div>
         <button
           type="button"
           onClick={() => router.back()}
-          className="h-9 w-9 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50"
+          className="inline-flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900"
         >
-          <ArrowLeftIcon size={16} />
+          <span className="h-9 w-9 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+            <ChevronLeftIcon size={16} />
+          </span>
+          Go Back
         </button>
-        <span className="text-sm text-slate-600">Go Back</span>
       </div>
 
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
-          <p className="text-sm text-slate-500 mt-1">Here's your notifications</p>
-        </div>
-        <Button variant="outline" onClick={markAll}>
-          Mark all read
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Here&apos;s your all Notifications
+        </p>
       </div>
 
       {loading ? (
-        <ListSkeleton count={6} />
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-xl" />
+          ))}
+        </div>
       ) : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-sm text-slate-500">
           You have no notifications.
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {items.map((n) => (
             <div
               key={n._id}
-              className={`bg-white rounded-2xl border-l-4 border border-slate-200 ${
-                !n.read ? "shadow-sm" : "opacity-80"
-              } pl-4 pr-2 py-3 ${colorFor(n.type)}`}
               onClick={() => !n.read && markRead(n._id)}
+              className={`group relative bg-white rounded-xl border border-slate-200 shadow-sm pl-5 pr-4 py-4 cursor-pointer overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5 before:rounded-l-xl ${stripeFor(
+                n.type
+              )} ${n.read ? "opacity-75" : ""}`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 flex-1">
-                  <span className="h-7 w-7 rounded-full bg-white border border-slate-200 flex items-center justify-center mt-0.5">
-                    {iconFor(n.type)}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-slate-900">
-                      {n.title}
-                    </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-slate-900">
+                    {n.title}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
                     {n.body ? (
-                      <div className="text-xs text-slate-600 mt-0.5">
+                      <span>
                         {n.body}
-                      </div>
+                        <span className="mx-2 text-slate-300">•</span>
+                      </span>
                     ) : null}
-                    <div className="text-[10px] text-slate-400 mt-1">
-                      {new Date(n.createdAt).toLocaleString()}
-                    </div>
+                    {fmtTime(n.createdAt)}
                   </div>
                 </div>
                 <button
                   type="button"
+                  aria-label="Delete notification"
                   onClick={(e) => {
                     e.stopPropagation();
                     remove(n._id);
                   }}
-                  className="h-8 w-8 rounded-full text-red-500 hover:bg-red-50 flex items-center justify-center"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 rounded-full text-red-500 hover:bg-red-50 flex items-center justify-center shrink-0"
                 >
                   <TrashIcon size={14} />
                 </button>
