@@ -44,6 +44,12 @@ export default function BookingsPage() {
 
   const [items, setItems] = useState<SessionDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
+  // Reset the day filter whenever the visible month changes
+  useEffect(() => {
+    setSelectedDay(null);
+  }, [year, month]);
 
   useEffect(() => {
     let cancel = false;
@@ -105,19 +111,30 @@ export default function BookingsPage() {
     } else setMonth((m) => m + 1);
   };
 
-  const upcoming = items
-    .filter(
-      (s) =>
-        s.status === "pending" ||
-        s.status === "consent" ||
-        s.status === "waiting" ||
-        s.status === "live"
-    )
-    .sort(
-      (a, b) =>
-        new Date(a.scheduledFor || 0).getTime() -
-        new Date(b.scheduledFor || 0).getTime()
-    );
+  const isUpcomingStatus = (s: SessionDoc) =>
+    s.status === "pending" ||
+    s.status === "consent" ||
+    s.status === "waiting" ||
+    s.status === "live";
+
+  const byTime = (a: SessionDoc, b: SessionDoc) =>
+    new Date(a.scheduledFor || 0).getTime() -
+    new Date(b.scheduledFor || 0).getTime();
+
+  // When a calendar day is selected, show ALL sessions for that day.
+  // Otherwise show the month's upcoming bookings.
+  const visibleList = (
+    selectedDay != null
+      ? sessionsByDay.get(selectedDay) || []
+      : items.filter(isUpcomingStatus)
+  )
+    .slice()
+    .sort(byTime);
+
+  const listHeading =
+    selectedDay != null
+      ? `Bookings on ${selectedDay} ${monthName(month)} ${year}`
+      : "Upcoming Bookings";
 
   return (
     <div className="space-y-6">
@@ -175,24 +192,34 @@ export default function BookingsPage() {
                 year === today.getFullYear();
               const sessionsForDay = c.day ? sessionsByDay.get(c.day) || [] : [];
               const has = sessionsForDay.length > 0;
+              const isSelected = c.day != null && c.day === selectedDay;
               return (
-                <div
+                <button
                   key={i}
-                  className={`min-h-16 sm:min-h-22 rounded-lg sm:rounded-xl border p-1.5 sm:p-2 transition-colors ${
-                    isToday
-                      ? "bg-[#0a7a90] text-white border-[#0a7a90]"
-                      : has
-                        ? "bg-sky-50 border-sky-100"
-                        : c.inMonth
-                          ? "bg-white border-slate-200"
-                          : "bg-slate-50/50 border-transparent"
+                  type="button"
+                  disabled={!c.day || !has}
+                  onClick={() =>
+                    setSelectedDay((prev) => (prev === c.day ? null : c.day))
+                  }
+                  className={`min-h-16 sm:min-h-22 w-full text-left rounded-lg sm:rounded-xl border p-1.5 sm:p-2 transition-colors ${
+                    has ? "cursor-pointer" : "cursor-default"
+                  } ${
+                    isSelected
+                      ? "bg-[#0a7a90] text-white border-[#0a7a90] ring-2 ring-[#0a7a90]/40"
+                      : isToday
+                        ? "bg-[#0a7a90] text-white border-[#0a7a90]"
+                        : has
+                          ? "bg-sky-50 border-sky-100 hover:bg-sky-100"
+                          : c.inMonth
+                            ? "bg-white border-slate-200"
+                            : "bg-slate-50/50 border-transparent"
                   }`}
                 >
                   {c.day ? (
                     <>
                       <div
                         className={`text-sm font-semibold ${
-                          isToday ? "text-white" : "text-slate-900"
+                          isSelected || isToday ? "text-white" : "text-slate-900"
                         }`}
                       >
                         {c.day}
@@ -200,7 +227,7 @@ export default function BookingsPage() {
                       {has && (
                         <div
                           className={`mt-1 text-[10px] truncate ${
-                            isToday ? "text-white" : "text-[#0a7a90]"
+                            isSelected || isToday ? "text-white" : "text-[#0a7a90]"
                           }`}
                         >
                           {sessionsForDay.length} booking
@@ -209,7 +236,7 @@ export default function BookingsPage() {
                       )}
                     </>
                   ) : null}
-                </div>
+                </button>
               );
             })}
           </div>
@@ -217,22 +244,36 @@ export default function BookingsPage() {
       </div>
 
       <div>
-        <h3 className="font-semibold text-slate-900 mb-3">Upcoming Bookings</h3>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h3 className="font-semibold text-slate-900">{listHeading}</h3>
+          {selectedDay != null && (
+            <button
+              type="button"
+              onClick={() => setSelectedDay(null)}
+              className="text-sm font-medium text-[#0a7a90] hover:underline"
+            >
+              Clear filter
+            </button>
+          )}
+        </div>
         <div className="space-y-2">
-          {upcoming.length === 0 ? (
+          {visibleList.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-sm text-slate-500">
-              No upcoming bookings this month.
+              {selectedDay != null
+                ? "No bookings on this day."
+                : "No upcoming bookings this month."}
             </div>
           ) : (
-            upcoming.map((s) => {
+            visibleList.map((s) => {
               const u = populated(s.user);
               return (
                 <div
                   key={s._id}
-                  className="bg-white rounded-2xl border border-slate-200 p-3 flex items-center gap-4"
+                  className="bg-white rounded-2xl border border-slate-200 p-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
                 >
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
                   <Avatar name={u.name} src={u.profilePhoto} size={56} />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="font-semibold text-slate-900">
                       {u.name}
                     </div>
@@ -250,28 +291,52 @@ export default function BookingsPage() {
                       {s.type} Session
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
+                  </div>
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
                     <Badge
-                      tone={s.status === "live" ? "success" : "warning"}
+                      tone={
+                        s.status === "live" || s.status === "completed"
+                          ? "success"
+                          : s.status === "cancelled" || s.status === "no_show"
+                            ? "danger"
+                            : "warning"
+                      }
                       className="capitalize"
                     >
                       {s.status === "live"
                         ? "Live"
-                        : s.status === "waiting"
-                          ? "Waiting"
-                          : s.status === "consent"
-                            ? "Consent"
-                            : "Pending"}
+                        : s.status === "completed"
+                          ? "Completed"
+                          : s.status === "cancelled"
+                            ? "Cancelled"
+                            : s.status === "no_show"
+                              ? "No Show"
+                              : s.status === "waiting"
+                                ? "Waiting"
+                                : s.status === "consent"
+                                  ? "Consent"
+                                  : "Pending"}
                     </Badge>
-                    <Link href={`/sessions/${s._id}/live`}>
-                      <button
-                        type="button"
-                        className="px-3 h-8 rounded-lg bg-[#0a7a90] text-white text-xs font-semibold flex items-center gap-1 hover:bg-[#076377]"
-                      >
-                        <VideoIcon size={12} />
-                        Join Session
-                      </button>
-                    </Link>
+                    {isUpcomingStatus(s) ? (
+                      <Link href={`/sessions/${s._id}/live`}>
+                        <button
+                          type="button"
+                          className="px-3 h-8 rounded-lg bg-[#0a7a90] text-white text-xs font-semibold flex items-center gap-1 hover:bg-[#076377]"
+                        >
+                          <VideoIcon size={12} />
+                          Join Session
+                        </button>
+                      </Link>
+                    ) : (
+                      <Link href={`/sessions/${s._id}`}>
+                        <button
+                          type="button"
+                          className="px-3 h-8 rounded-lg border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50"
+                        >
+                          View Details
+                        </button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               );

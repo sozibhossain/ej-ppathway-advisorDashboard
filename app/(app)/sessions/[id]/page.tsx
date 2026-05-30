@@ -96,7 +96,7 @@ export default function SessionDetailPage() {
         : ChatIcon;
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 w-full">
       <button
         type="button"
         onClick={() => router.back()}
@@ -132,7 +132,7 @@ export default function SessionDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
           <Stat label="Scheduled For" value={fmtDateTime(session.scheduledFor)} />
           <Stat
             label="Duration"

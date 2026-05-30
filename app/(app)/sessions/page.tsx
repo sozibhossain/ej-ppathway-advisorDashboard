@@ -686,7 +686,7 @@ function DonutChart({
 
   let acc = 0;
   return (
-    <svg width="200" height="200" viewBox="0 0 200 200">
+    <svg viewBox="0 0 200 200" className="w-40 sm:w-48 md:w-52 h-auto">
       <g transform="translate(100,100) rotate(-90)">
         <circle
           r={r}

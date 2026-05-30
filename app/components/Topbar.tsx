@@ -190,7 +190,7 @@ export function Topbar() {
                   className="fixed inset-0 z-10"
                   onClick={() => setMenuOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute right-0 mt-2 z-20 w-52 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
                   <Link
                     href="/profile"
                     onClick={() => setMenuOpen(false)}

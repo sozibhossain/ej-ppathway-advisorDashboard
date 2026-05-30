@@ -44,11 +44,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed top-4 right-4 z-[1000] flex flex-col gap-2">
+      <div className="fixed top-4 right-4 left-4 sm:left-auto z-1000 flex flex-col gap-2 items-end">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`min-w-65 max-w-100 rounded-lg shadow-lg px-4 py-3 text-sm font-medium border ${
+            className={`w-full sm:w-auto sm:min-w-65 max-w-100 rounded-lg shadow-lg px-4 py-3 text-sm font-medium border ${
               t.kind === "success"
                 ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                 : t.kind === "error"
