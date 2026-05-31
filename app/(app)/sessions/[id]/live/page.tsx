@@ -20,6 +20,22 @@ import {
   PaperclipIcon,
 } from "../../../../components/Icons";
 import type { MessageDoc, SessionDoc } from "../../../../lib/types";
+import { useLiveKitSession, type LiveKitStatus } from "../../../../lib/livekit";
+
+const statusLabel = (s: LiveKitStatus): string => {
+  switch (s) {
+    case "connecting":
+      return "Connecting…";
+    case "connected":
+      return "Live connected";
+    case "reconnecting":
+      return "Reconnecting…";
+    case "error":
+      return "Connection failed";
+    default:
+      return "Not connected";
+  }
+};
 
 const populated = (
   ref: SessionDoc["user"] | SessionDoc["advisor"]
@@ -311,10 +327,26 @@ export default function LiveSessionPage() {
         />
       )}
 
-      {session.type === "video" && <VideoBody u={u} onEnd={onEnd} ending={ending} />}
+      {session.type === "video" && (
+        <VideoBody
+          u={u}
+          onEnd={onEnd}
+          ending={ending}
+          sessionId={session._id}
+          live={session.status === "live"}
+        />
+      )}
 
       {session.type === "call" && (
-        <AudioBody u={u} elapsed={elapsed} earned={earned} onEnd={onEnd} ending={ending} />
+        <AudioBody
+          u={u}
+          elapsed={elapsed}
+          earned={earned}
+          onEnd={onEnd}
+          ending={ending}
+          sessionId={session._id}
+          live={session.status === "live"}
+        />
       )}
 
       <Modal
@@ -544,37 +576,74 @@ function VideoBody({
   u,
   onEnd,
   ending,
+  sessionId,
+  live,
 }: {
   u: { name: string; profilePhoto?: string };
   onEnd: () => void;
   ending: boolean;
+  sessionId: string;
+  live: boolean;
 }) {
-  const [muted, setMuted] = useState(false);
+  const lk = useLiveKitSession({ sessionId, mode: "video", enabled: live });
+
   return (
-    <div className="bg-slate-100 rounded-2xl border border-slate-200 h-[68vh] relative overflow-hidden">
-      <div className="absolute inset-0">
-        {u.profilePhoto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={u.profilePhoto}
-            alt={u.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-slate-800 text-white">
-            {u.name}
+    <div className="bg-slate-900 rounded-2xl border border-slate-200 h-[68vh] relative overflow-hidden">
+      {/* Remote participant video */}
+      <video
+        ref={lk.setRemoteVideoEl}
+        autoPlay
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover bg-slate-900"
+      />
+      {!lk.remotePresent && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-3">
+          {u.profilePhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={u.profilePhoto}
+              alt={u.name}
+              className="h-24 w-24 rounded-full object-cover opacity-80"
+            />
+          ) : null}
+          <div className="text-sm text-slate-300">
+            Waiting for {u.name} to join…
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Local camera preview */}
+      <div className="absolute top-4 right-4 w-40 h-28 rounded-lg bg-black border-2 border-white overflow-hidden flex items-center justify-center text-white text-xs">
+        <video
+          ref={lk.setLocalVideoEl}
+          autoPlay
+          playsInline
+          muted
+          className={`w-full h-full object-cover ${lk.camEnabled ? "" : "hidden"}`}
+        />
+        {!lk.camEnabled && <span>Camera off</span>}
       </div>
 
-      <div className="absolute top-4 right-4 w-40 h-28 rounded-lg bg-slate-900 border-2 border-white overflow-hidden flex items-center justify-center text-white text-xs">
-        Your Camera
+      {/* Status pill */}
+      <div className="absolute top-4 left-4 text-xs font-medium px-3 py-1 rounded-full bg-black/50 text-white flex items-center gap-1.5">
+        <span
+          className={`h-2 w-2 rounded-full ${
+            lk.status === "connected" ? "bg-emerald-400" : "bg-amber-400"
+          }`}
+        />
+        {statusLabel(lk.status)}
       </div>
+      {lk.error && (
+        <div className="absolute top-12 left-4 text-xs text-red-300 max-w-[60%]">
+          {lk.error}
+        </div>
+      )}
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur rounded-xl px-3 py-2 flex items-center gap-2">
         <button
           type="button"
-          aria-label="Camera"
+          aria-label="Toggle camera"
+          onClick={lk.toggleCamera}
           className="h-10 w-10 rounded-lg bg-white text-slate-900 flex items-center justify-center"
         >
           <CameraIcon size={16} />
@@ -582,19 +651,34 @@ function VideoBody({
         <button
           type="button"
           aria-label="Mute"
-          onClick={() => setMuted((m) => !m)}
+          onClick={lk.toggleMic}
           className="h-10 w-10 rounded-lg bg-white text-slate-900 flex items-center justify-center"
         >
-          {muted ? <MicOffIcon size={16} /> : <MicIcon size={16} />}
+          {lk.micEnabled ? <MicIcon size={16} /> : <MicOffIcon size={16} />}
         </button>
         <button
           type="button"
           aria-label="Maximize"
+          onClick={() => {
+            if (typeof document === "undefined") return;
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.().catch(() => {});
+            } else {
+              document.documentElement.requestFullscreen?.().catch(() => {});
+            }
+          }}
           className="h-10 w-10 rounded-lg bg-slate-300 text-slate-900 flex items-center justify-center"
         >
           <MaximizeIcon size={16} />
         </button>
-        <Button variant="danger" onClick={onEnd} loading={ending}>
+        <Button
+          variant="danger"
+          onClick={async () => {
+            await lk.disconnect();
+            onEnd();
+          }}
+          loading={ending}
+        >
           <PhoneIcon size={16} />
           End Session
         </Button>
@@ -609,20 +693,38 @@ function AudioBody({
   earned,
   onEnd,
   ending,
+  sessionId,
+  live,
 }: {
   u: { name: string; profilePhoto?: string };
   elapsed: number;
   earned: number;
   onEnd: () => void;
   ending: boolean;
+  sessionId: string;
+  live: boolean;
 }) {
-  const [muted, setMuted] = useState(false);
+  const lk = useLiveKitSession({ sessionId, mode: "call", enabled: live });
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 h-[60vh] flex flex-col items-center justify-center relative">
+      <div className="absolute top-4 left-4 text-xs font-medium px-3 py-1 rounded-full bg-slate-100 text-slate-700 flex items-center gap-1.5">
+        <span
+          className={`h-2 w-2 rounded-full ${
+            lk.status === "connected" ? "bg-emerald-500" : "bg-amber-400"
+          }`}
+        />
+        {statusLabel(lk.status)}
+      </div>
+
       <Avatar name={u.name} src={u.profilePhoto} size={140} />
       <div className="text-2xl font-bold text-slate-900 mt-4 flex items-center gap-2">
         {u.name}
-        <MicIcon size={18} className="text-[#0a7a90]" />
+        {lk.micEnabled ? (
+          <MicIcon size={18} className="text-[#0a7a90]" />
+        ) : (
+          <MicOffIcon size={18} className="text-slate-400" />
+        )}
       </div>
       <div className="text-3xl font-bold text-[#0a7a90] mt-2 tabular-nums">
         {fmtDuration(elapsed)}
@@ -630,31 +732,30 @@ function AudioBody({
       <div className="text-xs text-slate-500 mt-1">
         ${earned.toFixed(2)} so far
       </div>
+      <div className="text-xs text-slate-400 mt-1">
+        {lk.remotePresent ? `${u.name} is connected` : "Waiting for the other person…"}
+      </div>
+      {lk.error && (
+        <div className="text-xs text-red-500 mt-1">{lk.error}</div>
+      )}
 
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-100 rounded-xl p-2 flex items-center gap-2 shadow">
         <button
           type="button"
-          aria-label="Camera"
-          className="h-10 w-10 rounded-lg bg-white text-slate-900 flex items-center justify-center"
-        >
-          <CameraIcon size={16} />
-        </button>
-        <button
-          type="button"
           aria-label="Mute"
-          onClick={() => setMuted((m) => !m)}
+          onClick={lk.toggleMic}
           className="h-10 w-10 rounded-lg bg-white text-slate-900 flex items-center justify-center"
         >
-          {muted ? <MicOffIcon size={16} /> : <MicIcon size={16} />}
+          {lk.micEnabled ? <MicIcon size={16} /> : <MicOffIcon size={16} />}
         </button>
-        <button
-          type="button"
-          aria-label="Maximize"
-          className="h-10 w-10 rounded-lg bg-slate-200 text-slate-900 flex items-center justify-center"
+        <Button
+          variant="danger"
+          onClick={async () => {
+            await lk.disconnect();
+            onEnd();
+          }}
+          loading={ending}
         >
-          <MaximizeIcon size={16} />
-        </button>
-        <Button variant="danger" onClick={onEnd} loading={ending}>
           <PhoneIcon size={16} />
           End Session
         </Button>
