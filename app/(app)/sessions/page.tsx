@@ -4,12 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { useToast } from "../../lib/toast";
-import {
-  fmtCurrency,
-  fmtDate,
-  fmtMinutes,
-  fmtTime,
-} from "../../lib/format";
+import { fmtDate, fmtMinutes, fmtTime } from "../../lib/format";
+import { useMyMoney } from "../../lib/currency";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { Skeleton, StatGridSkeleton, CardSkeleton } from "../../components/ui/Skeleton";
@@ -45,6 +41,7 @@ const typeIcon = (t: SessionType) => {
 };
 
 export default function SessionsPage() {
+  const money = useMyMoney();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<"live" | "completed" | "cancelled">(
     "live"
@@ -520,7 +517,7 @@ export default function SessionsPage() {
                               : "—"}
                           </td>
                           <td className="px-3 py-3 font-semibold text-emerald-600">
-                            {fmtCurrency(s.advisorPayout || s.chargedAmount)}
+                            {money(s.advisorPayout || s.chargedAmount)}
                           </td>
                           <td className="px-3 py-3">
                             {typeof s.rating === "number" ? (
