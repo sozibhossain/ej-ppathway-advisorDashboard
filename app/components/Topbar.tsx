@@ -20,7 +20,7 @@ import {
 } from "./Icons";
 import { Toggle } from "./ui/Input";
 import { Avatar } from "./ui/Avatar";
-import { fmtCurrency } from "../lib/format";
+import { useMyMoney } from "../lib/currency";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: DashboardIcon, exact: true },
@@ -34,6 +34,7 @@ export function Topbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const money = useMyMoney();
   const [online, setOnline] = useState(true);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [unread, setUnread] = useState<number>(0);
@@ -164,7 +165,7 @@ export function Topbar() {
             <div className="leading-tight">
               <div className="text-[10px] text-slate-500">Wallet Balance</div>
               <div className="text-sm font-semibold text-[#0a7a90]">
-                {fmtCurrency(walletBalance)}
+                {money(walletBalance)}
               </div>
             </div>
           </Link>

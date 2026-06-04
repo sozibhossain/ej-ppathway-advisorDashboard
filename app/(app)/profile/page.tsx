@@ -6,6 +6,8 @@ import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import { useToast } from "../../lib/toast";
 import { fmtDate, tierLabel } from "../../lib/format";
+import { useCountries, useCities } from "../../lib/countries";
+import { useMySymbol } from "../../lib/currency";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { CardSkeleton, DetailSkeleton } from "../../components/ui/Skeleton";
@@ -25,9 +27,9 @@ import {
   UserIcon,
   MailIcon,
   PhoneIcon,
-  MapPinIcon,
   ChevronDownIcon,
 } from "../../components/Icons";
+import { Combobox } from "../../components/ui/Combobox";
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type {
   AdvisorProfile,
@@ -111,7 +113,8 @@ export default function ProfilePage() {
       await api.patch("/advisor/profile", {
         name: u.name,
         phone: u.phone,
-        location: u.location,
+        country: u.country,
+        city: u.city,
         professionalTitle: p.professionalTitle,
         bio: p.bio,
         detailedDescription: p.detailedDescription,
@@ -209,6 +212,8 @@ function PersonalTab({
   onProfileUpdate: () => void;
 }) {
   const toast = useToast();
+  const countries = useCountries();
+  const cities = useCities(u.country);
   const photoRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -351,12 +356,36 @@ function PersonalTab({
             onChange={() => undefined}
             readOnly
           />
-          <FormInput
-            label="Location"
-            icon={<MapPinIcon size={16} />}
-            value={u.location || ""}
-            onChange={(v) => setU({ ...u, location: v })}
-          />
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-700 mb-1.5">
+              Country
+            </span>
+            <Combobox
+              options={countries.map((c) => ({ value: c.iso2, label: c.name }))}
+              value={u.country || ""}
+              onChange={(v) => setU({ ...u, country: v, city: "" })}
+              placeholder="Select country…"
+              searchPlaceholder="Search countries…"
+              emptyText="No country found."
+              triggerClassName="h-11 px-3 bg-white border-slate-200 hover:border-slate-300 focus:border-[#0a7a90] focus:outline-none focus:ring-2 focus:ring-[#0a7a90]/20"
+            />
+          </label>
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-700 mb-1.5">
+              City
+            </span>
+            <Combobox
+              options={cities.map((c) => ({ value: c, label: c }))}
+              value={u.city || ""}
+              onChange={(v) => setU({ ...u, city: v })}
+              placeholder={u.country ? "Select city…" : "Select a country first"}
+              searchPlaceholder="Search cities…"
+              emptyText="No city found."
+              disabled={!u.country}
+              allowCustom
+              triggerClassName="h-11 px-3 bg-white border-slate-200 hover:border-slate-300 focus:border-[#0a7a90] focus:outline-none focus:ring-2 focus:ring-[#0a7a90]/20"
+            />
+          </label>
           <FormInput
             label="Professional Title"
             icon={<UserIcon size={16} />}
@@ -846,6 +875,7 @@ function PricingInput({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const symbol = useMySymbol();
   return (
     <label className="block">
       <span className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -853,7 +883,7 @@ function PricingInput({
       </span>
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
-          $
+          {symbol}
         </span>
         <input
           type="number"
@@ -861,7 +891,7 @@ function PricingInput({
           step={0.1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="w-full h-11 pl-7 pr-4 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
+          className="w-full h-11 pl-8 pr-4 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
         />
       </div>
     </label>
@@ -1629,6 +1659,7 @@ function FormInput({
   onChange,
   placeholder,
   readOnly,
+  list,
 }: {
   label: string;
   icon?: React.ReactNode;
@@ -1636,6 +1667,7 @@ function FormInput({
   onChange: (v: string) => void;
   placeholder?: string;
   readOnly?: boolean;
+  list?: string;
 }) {
   return (
     <label className="block">
@@ -1653,6 +1685,8 @@ function FormInput({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           readOnly={readOnly}
+          list={list}
+          autoComplete={list ? "off" : undefined}
           className={`w-full h-11 ${icon ? "pl-10" : "pl-4"} pr-4 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90] focus:ring-2 focus:ring-[#0a7a90]/20 ${
             readOnly ? "bg-slate-50" : ""
           }`}

@@ -5,11 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../../lib/api";
 import { useToast } from "../../../lib/toast";
-import {
-  fmtCurrency,
-  fmtDateTime,
-  fmtMinutes,
-} from "../../../lib/format";
+import { fmtDateTime, fmtMinutes } from "../../../lib/format";
+import { useMyMoney } from "../../../lib/currency";
 import { Avatar } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
 import { DetailSkeleton } from "../../../components/ui/Skeleton";
@@ -30,6 +27,7 @@ const populated = (
 };
 
 export default function SessionDetailPage() {
+  const money = useMyMoney();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
@@ -116,7 +114,7 @@ export default function SessionDetailPage() {
                 <TypeIcon size={14} />
                 {session.type} Session
                 <span>·</span>
-                <span>{fmtCurrency(session.ratePerMin)}/min</span>
+                <span>{money(session.ratePerMin)}/min</span>
               </div>
               <div className="mt-1">
                 <StatusBadge status={session.status} />
@@ -138,8 +136,8 @@ export default function SessionDetailPage() {
             label="Duration"
             value={fmtMinutes(session.durationMinutes || 0)}
           />
-          <Stat label="Estimated Cost" value={fmtCurrency(session.estimatedCost)} />
-          <Stat label="Charged" value={fmtCurrency(session.chargedAmount)} />
+          <Stat label="Estimated Cost" value={money(session.estimatedCost)} />
+          <Stat label="Charged" value={money(session.chargedAmount)} />
         </div>
 
         {session.advisorNotes ? (

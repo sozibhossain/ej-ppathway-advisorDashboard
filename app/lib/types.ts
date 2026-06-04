@@ -9,6 +9,10 @@ export type AdvisorUser = {
   phone?: string;
   role: Role;
   profilePhoto?: string;
+  country?: string;
+  city?: string;
+  currency?: string;
+  /** Legacy free-text label; superseded by country + city. */
   location?: string;
   language?: string;
   timezone?: string;
