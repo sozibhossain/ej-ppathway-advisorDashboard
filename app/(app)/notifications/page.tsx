@@ -35,6 +35,20 @@ const fmtTime = (iso: string) => {
 const sessionIdOf = (n: NotificationDoc): string | undefined =>
   (n.data?.sessionId || n.data?.session) as string | undefined;
 
+const contractTokenOf = (n: NotificationDoc): string | undefined =>
+  (n.data?.action === "sign-contract"
+    ? (n.data?.contractToken as string | undefined)
+    : undefined);
+
+// The in-app destination for a notification, or null if it isn't navigable.
+const linkFor = (n: NotificationDoc): string | null => {
+  const token = contractTokenOf(n);
+  if (token) return `/contract/sign?token=${encodeURIComponent(token)}`;
+  const sid = sessionIdOf(n);
+  if (sid) return `/sessions/${sid}`;
+  return null;
+};
+
 export default function NotificationsPage() {
   const router = useRouter();
   const toast = useToast();
@@ -86,8 +100,8 @@ export default function NotificationsPage() {
 
   const onRowClick = (n: NotificationDoc) => {
     if (!n.read) markRead(n._id);
-    const sid = sessionIdOf(n);
-    if (sid) router.push(`/sessions/${sid}`);
+    const dest = linkFor(n);
+    if (dest) router.push(dest);
   };
 
   const markAll = async () => {
@@ -219,7 +233,7 @@ export default function NotificationsPage() {
         <div className="space-y-3">
           {items.map((n) => {
             const isSelected = selected.has(n._id);
-            const hasSession = !!sessionIdOf(n);
+            const navigable = !!linkFor(n);
             return (
               <div
                 key={n._id}
@@ -228,7 +242,7 @@ export default function NotificationsPage() {
                   n.type
                 )} ${isSelected ? "border-[#0a7a90] ring-1 ring-[#0a7a90]" : "border-slate-200"} ${
                   n.read ? "opacity-75" : ""
-                } ${hasSession ? "cursor-pointer" : "cursor-default"}`}
+                } ${navigable ? "cursor-pointer" : "cursor-default"}`}
               >
                 <div className="flex items-start gap-3">
                   {/* Selection checkbox */}

@@ -628,16 +628,25 @@ function TierProgress({
   );
 }
 
+type ActivityItem = {
+  _id: string;
+  type: string;
+  title: string;
+  body?: string;
+  createdAt: string;
+  data?: Record<string, unknown>;
+};
+
+// Deep-link a contract-sent activity straight to the signing page.
+const activityHref = (n: ActivityItem): string | null => {
+  if (n.data?.action === "sign-contract" && n.data?.contractToken) {
+    return `/contract/sign?token=${encodeURIComponent(String(n.data.contractToken))}`;
+  }
+  return null;
+};
+
 function ActivityFeed() {
-  const [items, setItems] = useState<
-    {
-      _id: string;
-      type: string;
-      title: string;
-      body?: string;
-      createdAt: string;
-    }[]
-  >([]);
+  const [items, setItems] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -645,13 +654,7 @@ function ActivityFeed() {
     (async () => {
       try {
         const r = await api.get<{
-          items: {
-            _id: string;
-            type: string;
-            title: string;
-            body?: string;
-            createdAt: string;
-          }[];
+          items: ActivityItem[];
         }>("/notifications", { limit: 4 });
         if (!cancel) setItems(r.data?.items || []);
       } catch {
@@ -696,19 +699,29 @@ function ActivityFeed() {
 
   return (
     <div className="space-y-2">
-      {items.map((n) => (
-        <div
-          key={n._id}
-          className={`border-l-4 pl-3 pr-2 py-2 rounded-r-lg ${tone(n.type)}`}
-        >
-          <div className="text-sm font-medium text-slate-900">{n.title}</div>
-          {n.body ? (
-            <div className="text-[11px] text-slate-600 line-clamp-2">
-              {n.body}
-            </div>
-          ) : null}
-        </div>
-      ))}
+      {items.map((n) => {
+        const href = activityHref(n);
+        const inner = (
+          <>
+            <div className="text-sm font-medium text-slate-900">{n.title}</div>
+            {n.body ? (
+              <div className="text-[11px] text-slate-600 line-clamp-2">
+                {n.body}
+              </div>
+            ) : null}
+          </>
+        );
+        const className = `block border-l-4 pl-3 pr-2 py-2 rounded-r-lg ${tone(n.type)}`;
+        return href ? (
+          <Link key={n._id} href={href} className={`${className} hover:brightness-95 transition`}>
+            {inner}
+          </Link>
+        ) : (
+          <div key={n._id} className={className}>
+            {inner}
+          </div>
+        );
+      })}
     </div>
   );
 }
