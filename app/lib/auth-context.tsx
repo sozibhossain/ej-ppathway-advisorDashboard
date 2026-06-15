@@ -31,9 +31,20 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const PUBLIC_PREFIXES = ["/login", "/signup", "/verify", "/forgot", "/reset"];
 
+// "Open" paths are reachable by anyone and the auth guard never redirects to or
+// away from them. The contract signing page is token-authenticated, so it must
+// work both from the email link (advisor not logged in) and from the in-dashboard
+// notification (advisor logged in) — neither redirect should fire.
+const OPEN_PREFIXES = ["/contract"];
+
 const isPublicPath = (path?: string | null) => {
   if (!path) return false;
   return PUBLIC_PREFIXES.some((p) => path.startsWith(p));
+};
+
+const isOpenPath = (path?: string | null) => {
+  if (!path) return false;
+  return OPEN_PREFIXES.some((p) => path.startsWith(p));
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -75,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Route guard
   useEffect(() => {
     if (loading) return;
+    if (isOpenPath(pathname)) return; // never redirect to/from open paths
     const onPublic = isPublicPath(pathname);
     if (!user && !onPublic) {
       router.replace("/login");
