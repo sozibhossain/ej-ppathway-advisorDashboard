@@ -6,7 +6,6 @@ import { api } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth-context";
 import { fmtDate, tierLabel } from "../../../lib/format";
 import { useMyMoney } from "../../../lib/currency";
-import { useCountryName, formatLocation } from "../../../lib/countries";
 import { Avatar } from "../../../components/ui/Avatar";
 import { DetailSkeleton } from "../../../components/ui/Skeleton";
 import { Toggle } from "../../../components/ui/Input";
@@ -18,7 +17,6 @@ import {
   ChatIcon,
   PhoneIcon,
   VideoIcon,
-  MapPinIcon,
 } from "../../../components/Icons";
 import type {
   AdvisorProfile,
@@ -39,7 +37,6 @@ const days = [
 export default function PreviewProfile() {
   const router = useRouter();
   const { user } = useAuth();
-  const countryName = useCountryName();
   const money = useMyMoney();
   const [profile, setProfile] = useState<AdvisorProfile | null>(null);
   const [u, setU] = useState<AdvisorUser | null>(null);
@@ -108,8 +105,6 @@ export default function PreviewProfile() {
                   {profile.professionalTitle}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                  <MapPinIcon size={12} className="text-[#0a7a90]" />
-                  {formatLocation(u.city, countryName(u.country)) || "—"}
                   <StarIcon size={12} filled />
                   {(profile.avgRating || 0).toFixed(1)} ({reviews.length}{" "}
                   reviews)
