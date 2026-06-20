@@ -54,3 +54,13 @@ input[type="number"] {
 .thin-scroll::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Interactive elements should always show a pointer cursor on hover
+   (Tailwind v4 / browsers do not default buttons to pointer). Disabled
+   controls are intentionally excluded so they keep their default/not-allowed cursor. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+label[for],
+summary {
+  cursor: pointer;
+}
