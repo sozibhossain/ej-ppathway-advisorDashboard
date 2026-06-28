@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { api } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth-context";
 import { fmtDate, tierLabel } from "../../../lib/format";
-import { useMyMoney } from "../../../lib/currency";
 import { Avatar } from "../../../components/ui/Avatar";
 import { DetailSkeleton } from "../../../components/ui/Skeleton";
 import { Toggle } from "../../../components/ui/Input";
@@ -37,7 +36,7 @@ const days = [
 export default function PreviewProfile() {
   const router = useRouter();
   const { user } = useAuth();
-  const money = useMyMoney();
+  const credits = (value?: number) => `${Number(value || 0).toFixed(2)} credits`;
   const [profile, setProfile] = useState<AdvisorProfile | null>(null);
   const [u, setU] = useState<AdvisorUser | null>(null);
   const [reviews, setReviews] = useState<ReviewDoc[]>([]);
@@ -309,7 +308,7 @@ export default function PreviewProfile() {
 
           <div className="bg-white rounded-2xl border border-slate-200 p-5">
             <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-              <span className="text-emerald-600">$</span> Pricing
+              <span className="text-emerald-600">Cr</span> Credit Pricing
             </h3>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
@@ -317,7 +316,7 @@ export default function PreviewProfile() {
                   <ChatIcon size={14} className="text-[#0a7a90]" /> Chat
                 </span>
                 <span className="font-bold text-slate-900">
-                  {money(profile.pricing.chatPerMin)}/min
+                  {credits(profile.pricing.chatPerMin)}/min
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
@@ -325,7 +324,7 @@ export default function PreviewProfile() {
                   <PhoneIcon size={14} className="text-[#0a7a90]" /> Call
                 </span>
                 <span className="font-bold text-slate-900">
-                  {money(profile.pricing.callPerMin)}/min
+                  {credits(profile.pricing.callPerMin)}/min
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
@@ -333,7 +332,7 @@ export default function PreviewProfile() {
                   <VideoIcon size={14} className="text-[#0a7a90]" /> Video
                 </span>
                 <span className="font-bold text-slate-900">
-                  {money(profile.pricing.videoPerMin)}/min
+                  {credits(profile.pricing.videoPerMin)}/min
                 </span>
               </div>
             </div>

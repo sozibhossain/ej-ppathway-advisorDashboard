@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
-import { fmtNumber, fmtTime, fmtDuration, tierLabel } from "../lib/format";
-import { useMyMoney } from "../lib/currency";
+import { fmtNumber, fmtTime, fmtDuration, tierLabel, fmtCredits } from "../lib/format";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Skeleton, StatGridSkeleton, CardSkeleton } from "../components/ui/Skeleton";
@@ -95,7 +94,6 @@ const populated = (
 
 export default function DashboardHome() {
   const { user } = useAuth();
-  const money = useMyMoney();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -167,7 +165,7 @@ export default function DashboardHome() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Earnings Today"
-          value={money(data?.earningsToday || 0)}
+          value={fmtCredits(data?.earningsToday || 0)}
           trend="+14%"
           tone="emerald"
           icon={<TrendIcon size={18} />}
@@ -228,7 +226,7 @@ export default function DashboardHome() {
                       {populated(ongoing.user).name}
                     </div>
                     <div className="text-xs text-slate-500">
-                      {ongoing.type} • {money(ongoing.ratePerMin)}/min
+                      {ongoing.type} • {fmtCredits(ongoing.ratePerMin)}/min
                     </div>
                     <div className="mt-1">
                       <Badge tone="success">
@@ -259,7 +257,7 @@ export default function DashboardHome() {
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <div className="rounded-xl border border-slate-200 p-3">
                   <div className="text-lg font-bold text-slate-900">
-                    {money(ongoing.ratePerMin)}
+                    {fmtCredits(ongoing.ratePerMin)}
                     <span className="text-sm font-normal text-slate-500">
                       /min
                     </span>
@@ -270,7 +268,7 @@ export default function DashboardHome() {
                 </div>
                 <div className="rounded-xl border border-slate-200 p-3">
                   <div className="text-lg font-bold text-slate-900">
-                    {money(ongoing.chargedAmount)}
+                    {fmtCredits(ongoing.chargedAmount)}
                   </div>
                   <div className="text-[10px] text-slate-500">
                     Earning this session

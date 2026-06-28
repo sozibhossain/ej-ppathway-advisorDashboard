@@ -7,7 +7,6 @@ import { useAuth } from "../../lib/auth-context";
 import { useToast } from "../../lib/toast";
 import { fmtDate, tierLabel } from "../../lib/format";
 import { useCountries, useCities } from "../../lib/countries";
-import { useMySymbol } from "../../lib/currency";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { CardSkeleton, DetailSkeleton } from "../../components/ui/Skeleton";
@@ -707,28 +706,28 @@ function PricingTab({
     <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-8">
       <div>
         <h3 className="font-bold text-slate-900 mb-4">
-          Pricing & Availabilities
+          Credit Pricing & Availabilities
         </h3>
         <h4 className="text-sm font-semibold text-slate-700 mb-3">
-          Price per minutes
+          Credits per minute
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <PricingInput
-            label="Chat Pricing"
+            label="Chat credits/min"
             value={p.pricing.chatPerMin}
             onChange={(v) =>
               setP({ ...p, pricing: { ...p.pricing, chatPerMin: v } })
             }
           />
           <PricingInput
-            label="Audio Call Pricing"
+            label="Audio call credits/min"
             value={p.pricing.callPerMin}
             onChange={(v) =>
               setP({ ...p, pricing: { ...p.pricing, callPerMin: v } })
             }
           />
           <PricingInput
-            label="Video Call Pricing"
+            label="Video call credits/min"
             value={p.pricing.videoPerMin}
             onChange={(v) =>
               setP({ ...p, pricing: { ...p.pricing, videoPerMin: v } })
@@ -875,23 +874,19 @@ function PricingInput({
   value: number;
   onChange: (v: number) => void;
 }) {
-  const symbol = useMySymbol();
   return (
     <label className="block">
       <span className="block text-sm font-medium text-slate-700 mb-1.5">
         {label}
       </span>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
-          {symbol}
-        </span>
         <input
           type="number"
           min={0}
           step={0.1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="w-full h-11 pl-8 pr-4 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
+          className="w-full h-11 px-4 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
         />
       </div>
     </label>

@@ -4,8 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../../../../lib/api";
 import { useToast } from "../../../../lib/toast";
-import { fmtDuration } from "../../../../lib/format";
-import { useMyMoney } from "../../../../lib/currency";
+import { fmtDuration, fmtCredits } from "../../../../lib/format";
 import { Avatar } from "../../../../components/ui/Avatar";
 import { Button } from "../../../../components/ui/Button";
 import { CardSkeleton } from "../../../../components/ui/Skeleton";
@@ -46,7 +45,6 @@ const populated = (
 };
 
 export default function LiveSessionPage() {
-  const money = useMyMoney();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
@@ -278,13 +276,13 @@ export default function LiveSessionPage() {
         </div>
         <div className="text-center">
           <div className="text-lg font-bold">
-            {money(session.ratePerMin)}/min
+            {fmtCredits(session.ratePerMin)}/min
           </div>
           <div className="text-[11px] text-slate-500">Rate</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-bold text-emerald-600">
-            {money(earned || session.chargedAmount || 0)}
+            {fmtCredits(earned || session.chargedAmount || 0)}
           </div>
           <div className="text-[11px] text-slate-500">Current Earnings</div>
         </div>
@@ -377,7 +375,7 @@ export default function LiveSessionPage() {
             <SummaryCell
               tone="emerald"
               label="Earned"
-              value={money(summaryEarned)}
+              value={fmtCredits(summaryEarned)}
             />
             <SummaryCell tone="amber" label="Client" value={u.name.split(" ")[0]} />
           </div>

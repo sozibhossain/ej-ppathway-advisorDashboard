@@ -1,3 +1,8 @@
+export const fmtCredits = (n: number | undefined | null) => {
+  const v = Math.round(Number(n) || 0);
+  return `${v} credits`;
+};
+
 export const fmtCurrency = (n: number | undefined | null) => {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return "$0.00";
   return `$${Number(n).toFixed(2)}`;
