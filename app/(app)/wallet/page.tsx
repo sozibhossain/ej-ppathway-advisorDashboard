@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { useToast } from "../../lib/toast";
 import { useAuth } from "../../lib/auth-context";
-import { fmtDate, fmtDateTime, fmtMinutes } from "../../lib/format";
-import { useMyMoney } from "../../lib/currency";
+import { fmtDate, fmtDateTime, fmtMinutes, fmtCredits } from "../../lib/format";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -28,8 +27,6 @@ type Range = "all" | "today" | "week" | "month";
 export default function WalletPage() {
   const toast = useToast();
   const { user } = useAuth();
-  const money = useMyMoney();
-
   const [overview, setOverview] = useState<EarningsOverview | null>(null);
   const [loadingOverview, setLoadingOverview] = useState(true);
 
@@ -169,7 +166,7 @@ export default function WalletPage() {
     const advisorName = user?.name || "Advisor";
     const id = `INV-${t._id.slice(-6).toUpperCase()}`;
     const date = fmtDateTime(t.createdAt);
-    const amount = money(t.amount);
+    const amount = fmtCredits(t.amount);
     const html = `<!doctype html>
 <html><head><meta charset="utf-8"><title>${id}</title>
 <style>
@@ -266,7 +263,7 @@ td.r{font-weight:600;text-align:right}
           </div>
           <div className="text-xs text-slate-600 mt-3">Available Balance</div>
           <div className="text-3xl font-bold text-slate-900 mt-1">
-            {money(balance)}
+            {fmtCredits(balance)}
           </div>
           <div className="text-[11px] text-slate-500 mt-1 inline-flex items-center gap-1">
             <span className="text-slate-400">$</span>
@@ -277,13 +274,13 @@ td.r{font-weight:600;text-align:right}
             <div className="bg-white rounded-xl p-3">
               <div className="text-xs text-slate-600">Today's Earnings</div>
               <div className="text-emerald-600 font-bold text-xl mt-1">
-                +{money(overview?.todayEarnings || 0)}
+                +{fmtCredits(overview?.todayEarnings || 0)}
               </div>
             </div>
             <div className="bg-white rounded-xl p-3">
               <div className="text-xs text-slate-600">Today's Withdrawals</div>
               <div className="text-red-600 font-bold text-xl mt-1">
-                -{money(overview?.todayWithdrawals || 0)}
+                -{fmtCredits(overview?.todayWithdrawals || 0)}
               </div>
             </div>
           </div>
@@ -296,12 +293,12 @@ td.r{font-weight:600;text-align:right}
               <Badge2
                 icon={<DownloadIcon size={12} />}
                 label="Total Earnings"
-                value={money(overview?.grossEarnings || 0)}
+                value={fmtCredits(overview?.grossEarnings || 0)}
               />
               <Badge2
                 icon={<UploadIcon size={12} />}
                 label="Total Withdraw"
-                value={money(overview?.totalWithdrawn || 0)}
+                value={fmtCredits(overview?.totalWithdrawn || 0)}
               />
               <span className="px-3 h-7 inline-flex items-center rounded-lg bg-slate-100 text-slate-700 font-medium">
                 Weekly
@@ -406,21 +403,21 @@ td.r{font-weight:600;text-align:right}
               tone="sky"
               icon={<DownloadIcon size={16} />}
               label="Gross Earnings"
-              value={money(overview?.grossEarnings || 0)}
+              value={fmtCredits(overview?.grossEarnings || 0)}
               chip="+ 20%"
             />
             <SummaryStat
               tone="rose"
               icon={<TrendIcon size={16} />}
               label="Platform fee"
-              value={money(overview?.platformFee || 0)}
+              value={fmtCredits(overview?.platformFee || 0)}
               chip="-20% Commission"
             />
             <SummaryStat
               tone="emerald"
               icon={<TrendIcon size={16} />}
               label="Net Earnings"
-              value={money(overview?.netEarnings || 0)}
+              value={fmtCredits(overview?.netEarnings || 0)}
               chip="+ 14%"
             />
           </div>
@@ -564,7 +561,7 @@ td.r{font-weight:600;text-align:right}
                             {fmtDateTime(t.createdAt)}
                           </td>
                           <td className="px-3 py-3 font-semibold text-emerald-600">
-                            +{money(t.amount)}
+                            +{fmtCredits(t.amount)}
                           </td>
                         </>
                       ) : (
@@ -576,7 +573,7 @@ td.r{font-weight:600;text-align:right}
                             {fmtDateTime(t.createdAt)}
                           </td>
                           <td className="px-3 py-3 font-semibold text-red-600">
-                            -{money(t.amount)}
+                            -{fmtCredits(t.amount)}
                           </td>
                           <td className="px-3 py-3 text-slate-700">Stripe</td>
                         </>
@@ -677,7 +674,7 @@ td.r{font-weight:600;text-align:right}
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-700">Available Balance</span>
               <span className="font-bold text-emerald-600">
-                {money(balance)}
+                {fmtCredits(balance)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
