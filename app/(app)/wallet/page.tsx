@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { useToast } from "../../lib/toast";
 import { useAuth } from "../../lib/auth-context";
-import { fmtDate, fmtDateTime, fmtMinutes, fmtCredits } from "../../lib/format";
+import { fmtDate, fmtDateTime, fmtMinutes, fmtCredits, fmtCurrency } from "../../lib/format";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
+import { Input, Select } from "../../components/ui/Input";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal, ConfirmDialog } from "../../components/ui/Modal";
 import {
@@ -16,10 +17,12 @@ import {
   DownloadIcon,
   UploadIcon,
   ArrowLeftIcon,
+  PlusIcon,
 } from "../../components/Icons";
 import type {
   EarningsOverview,
   TransactionDoc,
+  PayoutAccountResponse,
 } from "../../lib/types";
 
 type Range = "all" | "today" | "week" | "month";
@@ -49,6 +52,18 @@ export default function WalletPage() {
 
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
+
+  const [payout, setPayout] = useState<PayoutAccountResponse | null>(null);
+  const [showPayoutMethod, setShowPayoutMethod] = useState(false);
+
+  const loadPayout = async () => {
+    try {
+      const r = await api.get<PayoutAccountResponse>("/wallet/advisor/payout-account");
+      setPayout(r.data || null);
+    } catch {
+      // ignore — payout config is best-effort
+    }
+  };
 
   const loadOverview = async () => {
     setLoadingOverview(true);
@@ -84,6 +99,7 @@ export default function WalletPage() {
 
   useEffect(() => {
     loadOverview();
+    loadPayout();
   }, []);
 
   useEffect(() => {
@@ -102,9 +118,15 @@ export default function WalletPage() {
       toast.error("Enter a valid amount");
       return;
     }
+    if (!payout?.account.hasMethod) {
+      toast.error("Add a payout method first");
+      setShowWithdraw(false);
+      setShowPayoutMethod(true);
+      return;
+    }
     setWithdrawing(true);
     try {
-      await api.post("/wallet/advisor/withdraw", { amount: v });
+      await api.post("/wallet/advisor/withdraw", { credits: v });
       toast.success("Withdrawal requested — payouts processed in 2-5 days");
       setShowWithdraw(false);
       setAmount("");
@@ -167,6 +189,9 @@ export default function WalletPage() {
     const id = `INV-${t._id.slice(-6).toUpperCase()}`;
     const date = fmtDateTime(t.createdAt);
     const amount = fmtCredits(t.amount);
+    const methodLabel = t.withdrawalMethod
+      ? t.withdrawalMethod.replace(/_/g, " ").replace("hyperwallet", "Hyperwallet")
+      : "Hyperwallet";
     const html = `<!doctype html>
 <html><head><meta charset="utf-8"><title>${id}</title>
 <style>
@@ -188,7 +213,7 @@ td.r{font-weight:600;text-align:right}
     <tr><td class="l">Advisor</td><td class="r">${advisorName}</td></tr>
     <tr><td class="l">Transaction ID</td><td class="r">${t._id}</td></tr>
     <tr><td class="l">Type</td><td class="r">Withdrawal</td></tr>
-    <tr><td class="l">Method</td><td class="r">Stripe</td></tr>
+    <tr><td class="l">Method</td><td class="r">${methodLabel}</td></tr>
     <tr><td class="l">Status</td><td class="r">${t.withdrawalStatus || t.status || "—"}</td></tr>
     <tr><td class="l">Date</td><td class="r">${date}</td></tr>
     <tr class="total"><td class="l">Amount</td><td class="r">- ${amount}</td></tr>
@@ -229,6 +254,12 @@ td.r{font-weight:600;text-align:right}
   const peakIdx = values.indexOf(max);
 
   const balance = overview?.wallet?.earningsBalance || 0;
+  const rate = payout?.config.payoutCreditUsdRate ?? 1;
+  const payoutCurrency = payout?.config.payoutCurrency || "USD";
+  const minCredits = payout?.config.minPayoutCredits ?? 50;
+  const balanceUsd = balance * rate;
+  const amountUsd = (Number(amount) || 0) * rate;
+  const method = payout?.account;
 
   return (
     <div className="space-y-6">
@@ -241,14 +272,20 @@ td.r{font-weight:600;text-align:right}
             Track and manage your professional income.
           </p>
         </div>
-        <Button
-          onClick={() => setShowWithdraw(true)}
-          disabled={balance < 50}
-          size="lg"
-        >
-          <UploadIcon size={16} />
-          Withdraw Funds
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="lg" onClick={() => setShowPayoutMethod(true)}>
+            <WalletIcon size={16} />
+            {payout?.account.hasMethod ? "Payout Method" : "Add Payout Method"}
+          </Button>
+          <Button
+            onClick={() => setShowWithdraw(true)}
+            disabled={balance < minCredits}
+            size="lg"
+          >
+            <UploadIcon size={16} />
+            Withdraw Funds
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -265,9 +302,8 @@ td.r{font-weight:600;text-align:right}
           <div className="text-3xl font-bold text-slate-900 mt-1">
             {fmtCredits(balance)}
           </div>
-          <div className="text-[11px] text-slate-500 mt-1 inline-flex items-center gap-1">
-            <span className="text-slate-400">$</span>
-            Minimum Withdrawal Amount - ($50)
+          <div className="text-[11px] text-slate-500 mt-1">
+            ≈ {fmtCurrency(balanceUsd)} {payoutCurrency} · Minimum {minCredits} credits
           </div>
 
           <div className="grid grid-cols-1 gap-2 mt-4">
@@ -575,7 +611,12 @@ td.r{font-weight:600;text-align:right}
                           <td className="px-3 py-3 font-semibold text-red-600">
                             -{fmtCredits(t.amount)}
                           </td>
-                          <td className="px-3 py-3 text-slate-700">Stripe</td>
+                          <td className="px-3 py-3 text-slate-700 capitalize">
+                            {(t.withdrawalMethod || method?.methodLabel || "—")
+                              .replace(/_/g, " ")
+                              .replace("hyperwallet", "")
+                              .trim() || "—"}
+                          </td>
                         </>
                       )}
                       <td className="px-5 py-3">
@@ -668,61 +709,82 @@ td.r{font-weight:600;text-align:right}
             <ArrowLeftIcon size={16} />
           </button>
           <h2 className="text-2xl font-bold text-slate-900">Withdraw Funds</h2>
-          <p className="text-sm text-slate-500">Paid out via Stripe Connect</p>
+          <p className="text-sm text-slate-500">
+            Paid out via {method?.methodType === "paypal" ? "PayPal" : "bank transfer"} (Hyperwallet)
+          </p>
 
           <div className="bg-sky-50 rounded-xl p-4 mt-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-700">Available Balance</span>
               <span className="font-bold text-emerald-600">
-                {fmtCredits(balance)}
+                {fmtCredits(balance)} <span className="text-slate-400 font-normal">≈ {fmtCurrency(balanceUsd)}</span>
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-700">Minimum Withdrawal</span>
-              <span className="font-bold text-slate-900">$50.00</span>
+              <span className="font-bold text-slate-900">{minCredits} credits</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-700">Payout rate</span>
+              <span className="font-bold text-slate-900">{fmtCurrency(rate)} / credit</span>
             </div>
           </div>
 
           <label className="block mt-4">
             <span className="block text-sm font-medium text-slate-700 mb-1.5">
-              Enter withdrawal amount
+              Enter withdrawal amount (credits)
             </span>
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="e.g. 100"
+              placeholder={`e.g. ${minCredits}`}
               className="w-full h-11 px-4 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0a7a90]/20 focus:border-[#0a7a90]"
-              min={50}
+              min={minCredits}
             />
+            {Number(amount) > 0 && (
+              <span className="block mt-1 text-xs text-slate-500">
+                You will receive ≈ {fmtCurrency(amountUsd)} {payoutCurrency}
+              </span>
+            )}
           </label>
 
           <div className="mt-3">
-            <div className="text-sm font-medium text-slate-700 mb-1.5">
-              Stripe connect account
-            </div>
-            <div className="bg-sky-50 rounded-lg p-3 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="h-8 w-8 rounded bg-white text-[#0a7a90] flex items-center justify-center">
-                  💳
-                </span>
-                <div>
-                  <div className="font-medium text-slate-900">
-                    Stripe — {user?.email}
-                  </div>
-                  <div className="text-[11px] text-slate-500">
-                    {user?.stripeConnectVerified
-                      ? "Connected · verified"
-                      : "Connection pending"}
+            <div className="text-sm font-medium text-slate-700 mb-1.5">Payout account</div>
+            {method?.hasMethod ? (
+              <div className="bg-sky-50 rounded-lg p-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="h-8 w-8 rounded bg-white text-[#0a7a90] flex items-center justify-center">
+                    {method.methodType === "paypal" ? "🅿️" : "🏦"}
+                  </span>
+                  <div>
+                    <div className="font-medium text-slate-900">
+                      {method.methodLabel || (method.methodType === "paypal" ? "PayPal" : "Bank account")}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {method.verified ? "Connected" : "Pending"} · {method.currency}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowWithdraw(false);
+                  setShowPayoutMethod(true);
+                }}
+                className="w-full text-left bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 hover:bg-amber-100"
+              >
+                No payout method yet — click to add a bank account or PayPal.
+              </button>
+            )}
           </div>
 
           <Button
             onClick={onWithdraw}
             loading={withdrawing}
+            disabled={!method?.hasMethod}
             className="w-full mt-4"
             size="lg"
           >
@@ -733,7 +795,211 @@ td.r{font-weight:600;text-align:right}
           </p>
         </div>
       </Modal>
+
+      {showPayoutMethod && (
+        <PayoutMethodModal
+          data={payout}
+          onClose={() => setShowPayoutMethod(false)}
+          onChanged={() => {
+            loadPayout();
+            loadOverview();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function PayoutMethodModal({
+  data,
+  onClose,
+  onChanged,
+}: {
+  data: PayoutAccountResponse | null;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const toast = useToast();
+  const [acct, setAcct] = useState(data?.account || null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [methodTab, setMethodTab] = useState<"bank" | "paypal">("bank");
+  const [routing, setRouting] = useState("");
+  const [accountNo, setAccountNo] = useState("");
+  const [purpose, setPurpose] = useState("CHECKING");
+  const [paypalEmail, setPaypalEmail] = useState("");
+
+  const refresh = async () => {
+    try {
+      const r = await api.get<PayoutAccountResponse>("/wallet/advisor/payout-account");
+      setAcct(r.data?.account || null);
+    } catch {
+      // ignore
+    }
+    onChanged();
+  };
+
+  const run = async (key: string, fn: () => Promise<unknown>, ok: string) => {
+    setBusy(key);
+    try {
+      await fn();
+      toast.success(ok);
+      await refresh();
+      return true;
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed");
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const setup = () =>
+    run("setup", () => api.post("/wallet/advisor/payout-account/setup", {}), "Payout account ready");
+
+  const addBank = async () => {
+    if (!routing || !accountNo) {
+      toast.error("Enter routing and account number");
+      return;
+    }
+    const ok = await run(
+      "bank",
+      () =>
+        api.post("/wallet/advisor/payout-account/bank", {
+          branchId: routing,
+          bankAccountId: accountNo,
+          bankAccountPurpose: purpose,
+        }),
+      "Bank account added"
+    );
+    if (ok) {
+      setRouting("");
+      setAccountNo("");
+    }
+  };
+
+  const addPaypal = async () => {
+    if (!paypalEmail) {
+      toast.error("Enter your PayPal email");
+      return;
+    }
+    const ok = await run(
+      "paypal",
+      () => api.post("/wallet/advisor/payout-account/paypal", { email: paypalEmail }),
+      "PayPal added"
+    );
+    if (ok) setPaypalEmail("");
+  };
+
+  const removeMethod = () =>
+    run("remove", () => api.delete("/wallet/advisor/payout-account/method"), "Payout method removed");
+
+  return (
+    <Modal open onClose={onClose} title="Payout Method" size="md">
+      <div className="space-y-5">
+        <p className="text-sm text-slate-500">
+          Add where you want to receive payouts. Your earned credits are converted to{" "}
+          {data?.config.payoutCurrency || "USD"} at{" "}
+          {fmtCurrency(data?.config.payoutCreditUsdRate ?? 1)} per credit.
+        </p>
+
+        {!acct?.configured ? (
+          <div className="rounded-xl border border-slate-200 p-4">
+            <div className="text-sm text-slate-600 mb-3">
+              Set up your payout account to add a bank account or PayPal.
+            </div>
+            <Button loading={busy === "setup"} onClick={setup}>
+              <PlusIcon size={16} /> Set up payout account
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">
+                    Active payout method
+                  </div>
+                  {acct.hasMethod ? (
+                    <div className="font-medium text-slate-900">
+                      {acct.methodType === "paypal" ? "🅿️ " : "🏦 "}
+                      {acct.methodLabel || acct.methodType} · {acct.currency}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-500">No method attached yet.</div>
+                  )}
+                </div>
+                {acct.hasMethod && (
+                  <Button variant="ghost" size="sm" loading={busy === "remove"} onClick={removeMethod}>
+                    <TrashIcon size={15} /> Remove
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 p-4">
+              <div className="mb-3 inline-flex bg-slate-100 rounded-lg p-1">
+                <button
+                  onClick={() => setMethodTab("bank")}
+                  className={`px-3 h-8 rounded-md text-xs font-medium ${methodTab === "bank" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                >
+                  Bank account
+                </button>
+                <button
+                  onClick={() => setMethodTab("paypal")}
+                  className={`px-3 h-8 rounded-md text-xs font-medium ${methodTab === "paypal" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                >
+                  PayPal
+                </button>
+              </div>
+
+              {methodTab === "bank" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Routing number (ABA)"
+                    value={routing}
+                    onChange={(e) => setRouting(e.target.value)}
+                    placeholder="021000021"
+                  />
+                  <Input
+                    label="Account number"
+                    value={accountNo}
+                    onChange={(e) => setAccountNo(e.target.value)}
+                    placeholder="1234567890"
+                  />
+                  <Select label="Account type" value={purpose} onChange={(e) => setPurpose(e.target.value)}>
+                    <option value="CHECKING">Checking</option>
+                    <option value="SAVINGS">Savings</option>
+                  </Select>
+                  <div className="flex items-end">
+                    <Button className="w-full" loading={busy === "bank"} onClick={addBank}>
+                      Save bank account
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="PayPal email"
+                    type="email"
+                    value={paypalEmail}
+                    onChange={(e) => setPaypalEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
+                  <div className="flex items-end">
+                    <Button className="w-full" loading={busy === "paypal"} onClick={addPaypal}>
+                      Save PayPal
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <p className="mt-3 text-[11px] text-slate-400">
+                Adding a new method replaces your current active payout method.
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
   );
 }
 
