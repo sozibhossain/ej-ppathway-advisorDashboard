@@ -165,8 +165,10 @@ export type TransactionDoc = {
   advisor?: { _id: string; name: string; profilePhoto?: string } | string;
   session?: { _id: string; sessionCode?: string; type?: SessionType; durationMinutes?: number } | string;
   amount: number;
+  amountUsd?: number;
   description?: string;
   withdrawalStatus?: string;
+  withdrawalMethod?: string;
   withdrawalRequestedAt?: string;
   createdAt: string;
 };
@@ -226,6 +228,26 @@ export type EarningsOverview = {
   platformFee: number;
   netEarnings: number;
   totalWithdrawn: number;
+};
+
+export type PayoutAccountInfo = {
+  configured: boolean;
+  status?: string | null;
+  hasMethod: boolean;
+  methodType?: "bank_account" | "paypal" | null;
+  methodLabel?: string;
+  currency?: string;
+  verified?: boolean;
+};
+
+export type PayoutAccountResponse = {
+  account: PayoutAccountInfo;
+  config: {
+    payoutCreditUsdRate: number;
+    payoutCurrency: string;
+    minPayoutCredits: number;
+  };
+  balance: { availableCredits: number; availableUsd: number };
 };
 
 export type PromotionPlanDef = {
