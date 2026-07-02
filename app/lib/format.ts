@@ -61,6 +61,46 @@ export const fmtDuration = (sec: number | undefined | null) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 };
 
+type SessionTiming = {
+  scheduledFor?: string | Date | null;
+  startedAt?: string | Date | null;
+  durationMinutes?: number | null;
+  status?: string | null;
+};
+
+const toMs = (value?: string | Date | null) => {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? null : ms;
+};
+
+export const sessionRemainingSeconds = (
+  session: SessionTiming,
+  now: Date = new Date()
+) => {
+  const durationMinutes = Number(session.durationMinutes || 0);
+  const startMs = toMs(session.startedAt || session.scheduledFor);
+  if (!startMs || durationMinutes <= 0) return 0;
+  const endMs = startMs + durationMinutes * 60 * 1000;
+  return Math.max(0, Math.floor((endMs - now.getTime()) / 1000));
+};
+
+export const isSessionTimeActive = (
+  session: SessionTiming,
+  now: Date = new Date()
+) => {
+  if (session.status && ["completed", "cancelled", "expired", "no_show"].includes(session.status)) {
+    return false;
+  }
+  const startMs = toMs(session.startedAt || session.scheduledFor);
+  return !!startMs && startMs <= now.getTime() && sessionRemainingSeconds(session, now) > 0;
+};
+
+export const fmtSessionTimeLeft = (
+  session: SessionTiming,
+  now: Date = new Date()
+) => fmtDuration(sessionRemainingSeconds(session, now));
+
 export const fmtMinutes = (mins: number | undefined | null) => {
   const m = Math.max(0, Math.floor(Number(mins) || 0));
   const h = Math.floor(m / 60);

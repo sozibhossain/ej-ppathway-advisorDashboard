@@ -195,7 +195,7 @@ export default function WalletPage() {
     const html = `<!doctype html>
 <html><head><meta charset="utf-8"><title>${id}</title>
 <style>
-body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;padding:32px;max-width:720px;margin:auto}
+body{font-family:Outfit,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#0f172a;padding:32px;max-width:720px;margin:auto}
 h1{margin:0 0 4px 0;font-size:24px}
 .muted{color:#64748b;font-size:12px}
 .box{border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-top:24px}

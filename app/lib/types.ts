@@ -95,6 +95,7 @@ export type SessionStatus =
   | "live"
   | "completed"
   | "cancelled"
+  | "expired"
   | "no_show"
   | "flagged"
   | "disputed";

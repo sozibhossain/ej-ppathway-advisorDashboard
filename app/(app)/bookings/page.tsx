@@ -37,6 +37,15 @@ const monthName = (m: number) =>
     "December",
   ][m];
 
+const bookingTimeRange = (session: SessionDoc) => {
+  if (!session.scheduledFor) return "Time not set";
+  const start = new Date(session.scheduledFor);
+  const end = new Date(
+    start.getTime() + Number(session.durationMinutes || 0) * 60 * 1000
+  );
+  return `${fmtTime(start)} - ${fmtTime(end)}`;
+};
+
 export default function BookingsPage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -279,11 +288,10 @@ export default function BookingsPage() {
                     </div>
                     <div className="text-xs text-slate-500 flex items-center gap-3 mt-1 flex-wrap">
                       <span className="inline-flex items-center gap-1">
-                        🕒 {fmtTime(s.scheduledFor)} ·{" "}
-                        {fmtMinutes(s.durationMinutes || 0)}
+                        Time {bookingTimeRange(s)} - {fmtMinutes(s.durationMinutes || 0)}
                       </span>
                       <span className="inline-flex items-center gap-1">
-                        📅 {fmtDate(s.scheduledFor)}
+                        Date {fmtDate(s.scheduledFor)}
                       </span>
                     </div>
                     <div className="text-[11px] text-emerald-600 font-medium mt-1 capitalize inline-flex items-center gap-1">
