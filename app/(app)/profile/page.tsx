@@ -109,11 +109,15 @@ export default function ProfilePage() {
     if (!u || !p) return;
     setSaving(true);
     try {
+      const browserTimezone =
+        Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
       await api.patch("/advisor/profile", {
         name: u.name,
         phone: u.phone,
         country: u.country,
         city: u.city,
+        timezone:
+          u.timezone && u.timezone !== "UTC" ? u.timezone : browserTimezone,
         professionalTitle: p.professionalTitle,
         bio: p.bio,
         detailedDescription: p.detailedDescription,

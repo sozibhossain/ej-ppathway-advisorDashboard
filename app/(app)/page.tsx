@@ -4,7 +4,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
-import { fmtNumber, fmtTime, fmtDuration, tierLabel, fmtCredits } from "../lib/format";
+import {
+  fmtNumber,
+  fmtTime,
+  fmtDuration,
+  tierLabel,
+  fmtCredits,
+  fmtSessionTimeLeft,
+  isSessionTimeActive,
+} from "../lib/format";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Skeleton, StatGridSkeleton, CardSkeleton } from "../components/ui/Skeleton";
@@ -96,6 +104,12 @@ export default function DashboardHome() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let cancel = false;
@@ -327,7 +341,10 @@ export default function DashboardHome() {
                         {u.name}
                       </div>
                       <div className="text-[11px] text-slate-500 capitalize">
-                        {s.type} Call · {fmtTime(s.scheduledFor)}
+                        {s.type} Call ·{" "}
+                        {isSessionTimeActive(s, now)
+                          ? `Time left ${fmtSessionTimeLeft(s, now)}`
+                          : fmtTime(s.scheduledFor)}
                       </div>
                     </div>
                     <ChevronRightIcon size={16} className="text-slate-400" />

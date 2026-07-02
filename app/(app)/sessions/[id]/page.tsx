@@ -5,7 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../../lib/api";
 import { useToast } from "../../../lib/toast";
-import { fmtDateTime, fmtMinutes, fmtCredits } from "../../../lib/format";
+import {
+  fmtDateTime,
+  fmtMinutes,
+  fmtCredits,
+  fmtSessionTimeLeft,
+  isSessionTimeActive,
+} from "../../../lib/format";
 import { Avatar } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
 import { DetailSkeleton } from "../../../components/ui/Skeleton";
@@ -34,6 +40,12 @@ export default function SessionDetailPage() {
   const [session, setSession] = useState<SessionDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -90,6 +102,7 @@ export default function SessionDetailPage() {
       : session.type === "call"
         ? PhoneIcon
         : ChatIcon;
+  const showTimeLeft = isSessionTimeActive(session, now);
 
   return (
     <div className="space-y-6 w-full">
@@ -131,8 +144,12 @@ export default function SessionDetailPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
           <Stat label="Scheduled For" value={fmtDateTime(session.scheduledFor)} />
           <Stat
-            label="Duration"
-            value={fmtMinutes(session.durationMinutes || 0)}
+            label={showTimeLeft ? "Time Left" : "Duration"}
+            value={
+              showTimeLeft
+                ? fmtSessionTimeLeft(session, now)
+                : fmtMinutes(session.durationMinutes || 0)
+            }
           />
           <Stat label="Estimated Cost" value={fmtCredits(session.estimatedCost)} />
           <Stat label="Charged" value={fmtCredits(session.chargedAmount)} />
@@ -150,7 +167,7 @@ export default function SessionDetailPage() {
         <div className="flex gap-2 mt-6 flex-wrap">
           {session.status === "live" ? (
             <Link href={`/sessions/${session._id}/live`}>
-              <Button>Open Live Session</Button>
+              <Button>Open Live Session - {fmtSessionTimeLeft(session, now)}</Button>
             </Link>
           ) : null}
 
@@ -158,7 +175,9 @@ export default function SessionDetailPage() {
             session.status === "consent" ||
             session.status === "waiting") && (
             <Button onClick={onStart} loading={working}>
-              Start Session
+              {showTimeLeft
+                ? `Start Session - ${fmtSessionTimeLeft(session, now)}`
+                : "Start Session"}
             </Button>
           )}
         </div>
@@ -184,6 +203,7 @@ function StatusBadge({ status }: { status: string }) {
     live: { tone: "success", label: "Live" },
     completed: { tone: "success", label: "Completed" },
     cancelled: { tone: "danger", label: "Cancelled" },
+    expired: { tone: "neutral", label: "Expired" },
     no_show: { tone: "danger", label: "No Show" },
     flagged: { tone: "danger", label: "Flagged" },
     disputed: { tone: "warning", label: "Disputed" },

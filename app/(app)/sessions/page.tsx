@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { useToast } from "../../lib/toast";
-import { fmtDate, fmtMinutes, fmtTime, fmtCredits } from "../../lib/format";
+import {
+  fmtDate,
+  fmtMinutes,
+  fmtTime,
+  fmtCredits,
+  fmtSessionTimeLeft,
+  isSessionTimeActive,
+} from "../../lib/format";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { Skeleton, StatGridSkeleton, CardSkeleton } from "../../components/ui/Skeleton";
@@ -18,7 +25,7 @@ import {
   VideoIcon,
   StarIcon,
 } from "../../components/Icons";
-import type { SessionDoc, SessionType, SessionStatus } from "../../lib/types";
+import type { SessionDoc, SessionType } from "../../lib/types";
 
 const TABS: { key: "live" | "completed" | "cancelled"; label: string; tone: string }[] = [
   { key: "live", label: "Live", tone: "blue" },
@@ -53,6 +60,7 @@ export default function SessionsPage() {
   const [items, setItems] = useState<SessionDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [tabLoading, setTabLoading] = useState(false);
+  const [now, setNow] = useState(() => new Date());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -66,6 +74,11 @@ export default function SessionsPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
 
   const tableRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const scrollToTable = () => {
     tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -342,7 +355,10 @@ export default function SessionsPage() {
                         {u.name}
                       </div>
                       <div className="text-[11px] text-slate-500 capitalize">
-                        {s.type} Call · {fmtTime(s.scheduledFor)}
+                        {s.type} Call ·{" "}
+                        {isSessionTimeActive(s, now)
+                          ? `Time left ${fmtSessionTimeLeft(s, now)}`
+                          : fmtTime(s.scheduledFor)}
                       </div>
                     </div>
                     <ChevronRightIcon size={16} className="text-slate-400" />
@@ -445,7 +461,7 @@ export default function SessionsPage() {
                   <th className="px-3 py-3 text-left font-semibold">Reason</th>
                 )}
                 {activeTab === "live" && (
-                  <th className="px-3 py-3 text-left font-semibold">Started</th>
+                  <th className="px-3 py-3 text-left font-semibold">Time</th>
                 )}
                 <th className="px-3 py-3 text-left font-semibold">Date</th>
                 <th className="px-5 py-3 text-right font-semibold">Action</th>
@@ -540,7 +556,9 @@ export default function SessionsPage() {
                       )}
                       {activeTab === "live" && (
                         <td className="px-3 py-3 text-slate-600">
-                          {fmtTime(s.startedAt)}
+                          {isSessionTimeActive(s, now)
+                            ? `Time left ${fmtSessionTimeLeft(s, now)}`
+                            : fmtTime(s.startedAt || s.scheduledFor)}
                         </td>
                       )}
                       <td className="px-3 py-3 text-slate-600">
