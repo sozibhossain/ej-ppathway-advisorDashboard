@@ -33,6 +33,10 @@ const days = [
   "sunday",
 ];
 
+function isAudioMediaUrl(url: string) {
+  return /\.(aac|aiff|flac|m4a|mp3|ogg|opus|wav)(\?|#|$)/i.test(url);
+}
+
 export default function PreviewProfile() {
   const router = useRouter();
   const { user } = useAuth();
@@ -294,14 +298,20 @@ export default function PreviewProfile() {
         <div className="space-y-4">
           {profile.introVideoUrl ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <h3 className="font-bold text-slate-900 mb-3">Intro video</h3>
+              <h3 className="font-bold text-slate-900 mb-3">Intro media</h3>
               <div className="rounded-xl overflow-hidden aspect-video bg-slate-100">
                 {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                <video
-                  src={profile.introVideoUrl}
-                  controls
-                  className="w-full h-full"
-                />
+                {isAudioMediaUrl(profile.introVideoUrl) ? (
+                  <div className="flex h-full items-center px-4">
+                    <audio src={profile.introVideoUrl} controls className="w-full" />
+                  </div>
+                ) : (
+                  <video
+                    src={profile.introVideoUrl}
+                    controls
+                    className="w-full h-full"
+                  />
+                )}
               </div>
             </div>
           ) : null}
