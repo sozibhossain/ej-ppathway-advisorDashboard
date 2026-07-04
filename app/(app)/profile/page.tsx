@@ -74,6 +74,78 @@ const SUGGESTED_STYLES = [
   "Connection",
 ];
 
+function isAudioMediaUrl(url: string) {
+  return /\.(aac|aiff|flac|m4a|mp3|ogg|opus|wav)(\?|#|$)/i.test(url);
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function cropImageToSquare(file: File, zoom: number) {
+  const src = URL.createObjectURL(file);
+  try {
+    const img = await loadImage(src);
+    const canvas = document.createElement("canvas");
+    const size = 512;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas is unavailable");
+
+    const cropSize = Math.min(img.naturalWidth, img.naturalHeight) / zoom;
+    const sx = (img.naturalWidth - cropSize) / 2;
+    const sy = (img.naturalHeight - cropSize) / 2;
+    ctx.drawImage(img, sx, sy, cropSize, cropSize, 0, 0, size, size);
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("Could not crop image"))),
+        "image/jpeg",
+        0.92
+      );
+    });
+    return new File([blob], "profile-photo.jpg", { type: "image/jpeg" });
+  } finally {
+    URL.revokeObjectURL(src);
+  }
+}
+
+function normalizeProfileForEdit(profile: AdvisorProfile) {
+  return {
+    ...profile,
+    pricing: {
+      ...profile.pricing,
+      chatPerMin: 0,
+      callPerMin: 0,
+      videoPerMin: 0,
+    },
+    autoOnlineMode: false,
+    weeklySchedule: Object.fromEntries(
+      [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ].map((day) => [
+        day,
+        {
+          ...(profile.weeklySchedule?.[day] || { from: "09:00", to: "18:00" }),
+          enabled: false,
+        },
+      ]),
+    ),
+  };
+}
+
 export default function ProfilePage() {
   const toast = useToast();
   const { user, refreshMe } = useAuth();
@@ -92,7 +164,7 @@ export default function ProfilePage() {
         );
         if (!cancel && r.data) {
           setU(r.data.user);
-          setP(r.data.profile);
+          setP(normalizeProfileForEdit(r.data.profile));
         }
       } catch {
         // ignore
@@ -221,6 +293,34 @@ function PersonalTab({
   const videoRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [vidUploading, setVidUploading] = useState(false);
+  const [photoCropFile, setPhotoCropFile] = useState<File | null>(null);
+  const [photoCropPreview, setPhotoCropPreview] = useState("");
+  const [photoCropZoom, setPhotoCropZoom] = useState(1);
+
+  useEffect(() => {
+    return () => {
+      if (photoCropPreview) URL.revokeObjectURL(photoCropPreview);
+    };
+  }, [photoCropPreview]);
+
+  const openPhotoCrop = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    if (photoCropPreview) URL.revokeObjectURL(photoCropPreview);
+    setPhotoCropFile(file);
+    setPhotoCropPreview(URL.createObjectURL(file));
+    setPhotoCropZoom(1);
+  };
+
+  const closePhotoCrop = () => {
+    if (photoCropPreview) URL.revokeObjectURL(photoCropPreview);
+    setPhotoCropFile(null);
+    setPhotoCropPreview("");
+    setPhotoCropZoom(1);
+    if (photoRef.current) photoRef.current.value = "";
+  };
 
   const onUploadPhoto = async (file: File) => {
     setUploading(true);
@@ -242,6 +342,17 @@ function PersonalTab({
     }
   };
 
+  const uploadCroppedPhoto = async () => {
+    if (!photoCropFile) return;
+    try {
+      const cropped = await cropImageToSquare(photoCropFile, photoCropZoom);
+      closePhotoCrop();
+      await onUploadPhoto(cropped);
+    } catch {
+      toast.error("Could not crop image");
+    }
+  };
+
   const onUploadVideo = async (file: File) => {
     setVidUploading(true);
     try {
@@ -253,7 +364,7 @@ function PersonalTab({
         { isFormData: true }
       );
       if (r.data?.url) setP({ ...p, introVideoUrl: r.data.url });
-      toast.success("Intro video uploaded");
+      toast.success("Intro media uploaded");
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Upload failed");
     } finally {
@@ -283,7 +394,7 @@ function PersonalTab({
                 hidden
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) onUploadPhoto(f);
+                  if (f) openPhotoCrop(f);
                 }}
               />
             </div>
@@ -302,16 +413,30 @@ function PersonalTab({
               </div>
             </div>
           </div>
+          {photoCropPreview && (
+            <PhotoCropModal
+              preview={photoCropPreview}
+              zoom={photoCropZoom}
+              setZoom={setPhotoCropZoom}
+              uploading={uploading}
+              onCancel={closePhotoCrop}
+              onApply={uploadCroppedPhoto}
+            />
+          )}
         </div>
 
         <div>
-          <h3 className="font-semibold text-slate-900">Intro Video</h3>
+          <h3 className="font-semibold text-slate-900">Intro Audio or Video</h3>
           <div className="rounded-xl bg-slate-100 aspect-video mt-3 overflow-hidden flex items-center justify-center">
             {p.introVideoUrl ? (
               // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video src={p.introVideoUrl} controls className="w-full h-full" />
+              isAudioMediaUrl(p.introVideoUrl) ? (
+                <audio src={p.introVideoUrl} controls className="w-full px-4" />
+              ) : (
+                <video src={p.introVideoUrl} controls className="w-full h-full" />
+              )
             ) : (
-              <div className="text-slate-500 text-sm">No intro video</div>
+              <div className="text-slate-500 text-sm">No intro media</div>
             )}
           </div>
           <Button
@@ -322,12 +447,12 @@ function PersonalTab({
             loading={vidUploading}
           >
             <UploadIcon size={14} />
-            Upload New Video
+            Upload New Audio or Video
           </Button>
           <input
             ref={videoRef}
             type="file"
-            accept="video/*"
+            accept="audio/*,video/*"
             hidden
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -417,6 +542,77 @@ function PersonalTab({
             onChange={(v) => setP({ ...p, detailedDescription: v })}
             rows={6}
           />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhotoCropModal({
+  preview,
+  zoom,
+  setZoom,
+  uploading,
+  onCancel,
+  onApply,
+}: {
+  preview: string;
+  zoom: number;
+  setZoom: (v: number) => void;
+  uploading: boolean;
+  onCancel: () => void;
+  onApply: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-5">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="font-bold text-slate-900">Crop profile photo</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Adjust the crop before uploading.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-8 w-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+            aria-label="Close crop"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mx-auto h-72 w-72 max-w-full overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={preview}
+            alt="Profile crop preview"
+            className="h-full w-full object-cover"
+            style={{ transform: `scale(${zoom})` }}
+          />
+        </div>
+
+        <label className="mt-5 block">
+          <span className="mb-2 block text-sm font-medium text-slate-700">Zoom</span>
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.05}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="w-full accent-[#0a7a90]"
+          />
+        </label>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="button" loading={uploading} onClick={onApply}>
+            Crop & Upload
+          </Button>
         </div>
       </div>
     </div>
@@ -766,7 +962,7 @@ function PricingTab({
         <div className="space-y-2">
           {days.map((d) => {
             const sched = p.weeklySchedule?.[d] || {
-              enabled: true,
+              enabled: false,
               from: "09:00",
               to: "18:00",
             };
@@ -878,6 +1074,18 @@ function PricingInput({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const format = (n: number) => {
+    const next = Number(n);
+    if (!Number.isFinite(next) || next <= 0) return "00";
+    return next.toFixed(2);
+  };
+  const [display, setDisplay] = useState(format(value));
+
+  useEffect(() => {
+    setDisplay(format(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   return (
     <label className="block">
       <span className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -885,11 +1093,16 @@ function PricingInput({
       </span>
       <div className="relative">
         <input
-          type="number"
-          min={0}
-          step={0.1}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          type="text"
+          inputMode="decimal"
+          value={display}
+          onChange={(e) => {
+            const next = e.target.value;
+            if (!/^\d*\.?\d*$/.test(next)) return;
+            setDisplay(next);
+            onChange(Number(next) || 0);
+          }}
+          onBlur={() => setDisplay(format(value))}
           className="w-full h-11 px-4 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-[#0a7a90]"
         />
       </div>
