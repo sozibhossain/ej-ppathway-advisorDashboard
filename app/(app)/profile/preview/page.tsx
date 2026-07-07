@@ -20,6 +20,7 @@ import {
 import type {
   AdvisorProfile,
   AdvisorUser,
+  DaySchedule,
   ReviewDoc,
 } from "../../../lib/types";
 
@@ -32,6 +33,16 @@ const days = [
   "saturday",
   "sunday",
 ];
+
+function scheduleLabel(schedule?: DaySchedule) {
+  if (!schedule?.enabled) return "Off";
+  const slots = schedule.slots?.length
+    ? schedule.slots
+    : [{ from: schedule.from, to: schedule.to }];
+  return slots
+    .map((slot) => `${slot.from || "09:00"} - ${slot.to || "18:00"}`)
+    .join(", ");
+}
 
 function isAudioMediaUrl(url: string) {
   return /\.(aac|aiff|flac|m4a|mp3|ogg|opus|wav)(\?|#|$)/i.test(url);
@@ -173,9 +184,7 @@ export default function PreviewProfile() {
                     >
                       <span className="capitalize text-slate-700">{d}</span>
                       <span className="text-[#0a7a90] font-semibold">
-                        {sched?.enabled
-                          ? `${sched.from} - ${sched.to}`
-                          : "Off"}
+                        {scheduleLabel(sched)}
                       </span>
                     </div>
                   );

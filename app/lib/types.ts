@@ -31,10 +31,21 @@ export type AdvisorUser = {
   updatedAt?: string;
 };
 
+export type ScheduleSlot = {
+  from: string;
+  to: string;
+};
+
 export type DaySchedule = {
   enabled: boolean;
   from: string;
   to: string;
+  slots?: ScheduleSlot[];
+};
+
+export type DateAvailability = {
+  unavailable?: boolean;
+  slots?: ScheduleSlot[];
 };
 
 export type AdvisorPricing = {
@@ -67,6 +78,7 @@ export type AdvisorProfile = {
   pricing: AdvisorPricing;
   autoOnlineMode?: boolean;
   weeklySchedule?: Record<string, DaySchedule>;
+  dateAvailability?: Record<string, DateAvailability>;
   isOnline?: boolean;
   lastSeenAt?: string;
   tier: Tier;
@@ -252,18 +264,18 @@ export type PayoutAccountResponse = {
 };
 
 export type PromotionPlanDef = {
+  label?: string;
   price: number;
   days: number;
   visibilityBoost?: number;
-  impressionsPerDay?: number | string;
+  impressionsPerDay?: number;
   features?: string[];
+  tone?: "emerald" | "violet" | "amber" | "sky" | "slate";
+  isPopular?: boolean;
+  sortOrder?: number;
 };
 
-export type PromotionPlans = {
-  basic: PromotionPlanDef;
-  pro: PromotionPlanDef;
-  premium: PromotionPlanDef;
-};
+export type PromotionPlans = Record<string, PromotionPlanDef>;
 
 export type ChatDoc = {
   _id: string;
