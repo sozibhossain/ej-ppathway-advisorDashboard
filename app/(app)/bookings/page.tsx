@@ -14,6 +14,12 @@ import {
 } from "../../components/Icons";
 import type { SessionDoc } from "../../lib/types";
 
+const TABS: { key: "live" | "completed" | "cancelled"; label: string; tone: string }[] = [
+  { key: "live", label: "Live", tone: "blue" },
+  { key: "completed", label: "Completed", tone: "emerald" },
+  { key: "cancelled", label: "Cancelled", tone: "rose" },
+];
+
 const populated = (
   ref: SessionDoc["user"] | SessionDoc["advisor"]
 ): { _id: string; name: string; profilePhoto?: string } => {
@@ -54,6 +60,7 @@ export default function BookingsPage() {
   const [items, setItems] = useState<SessionDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"live" | "completed" | "cancelled">("live");
 
   // Reset the day filter whenever the visible month changes
   useEffect(() => {
@@ -126,6 +133,30 @@ export default function BookingsPage() {
     s.status === "waiting" ||
     s.status === "live";
 
+  const statusGroup = (s: SessionDoc) => {
+    if (s.status === "completed") return "completed";
+    if (s.status === "cancelled" || s.status === "no_show" || s.status === "expired") {
+      return "cancelled";
+    }
+    return "live";
+  };
+
+  const counts = useMemo(
+    () => ({
+      live: items.filter((s) => statusGroup(s) === "live").length,
+      completed: items.filter((s) => statusGroup(s) === "completed").length,
+      cancelled: items.filter((s) => statusGroup(s) === "cancelled").length,
+    }),
+    [items]
+  );
+
+  const totalAll = counts.live + counts.completed + counts.cancelled || 1;
+  const pct = {
+    upcoming: (counts.live / totalAll) * 100,
+    completed: (counts.completed / totalAll) * 100,
+    cancelled: (counts.cancelled / totalAll) * 100,
+  };
+
   const byTime = (a: SessionDoc, b: SessionDoc) =>
     new Date(a.scheduledFor || 0).getTime() -
     new Date(b.scheduledFor || 0).getTime();
@@ -135,15 +166,16 @@ export default function BookingsPage() {
   const visibleList = (
     selectedDay != null
       ? sessionsByDay.get(selectedDay) || []
-      : items.filter(isUpcomingStatus)
+      : items
   )
+    .filter((s) => statusGroup(s) === activeTab)
     .slice()
     .sort(byTime);
 
   const listHeading =
     selectedDay != null
-      ? `Bookings on ${selectedDay} ${monthName(month)} ${year}`
-      : "Upcoming Bookings";
+      ? `${TABS.find((t) => t.key === activeTab)?.label} bookings on ${selectedDay} ${monthName(month)} ${year}`
+      : `${TABS.find((t) => t.key === activeTab)?.label} Bookings`;
 
   return (
     <div className="space-y-6">
@@ -154,10 +186,46 @@ export default function BookingsPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-6">
+      <div className="grid grid-cols-1 xl:grid-cols-[0.7fr_1.3fr] gap-6">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-900">Sessions Overview</h3>
+            <span className="text-xs text-slate-500">
+              {monthName(month)} {year}
+            </span>
+          </div>
+          <div className="flex items-center justify-center py-2">
+            <DonutChart
+              data={[
+                { value: counts.live, color: "#d4a72c", label: "Upcoming" },
+                { value: counts.completed, color: "#10b981", label: "Completed" },
+                { value: counts.cancelled, color: "#dc2626", label: "Cancelled" },
+              ]}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+            <Legend
+              dot="#d4a72c"
+              label="Upcoming"
+              value={`${counts.live} (${pct.upcoming.toFixed(1)}%)`}
+            />
+            <Legend
+              dot="#10b981"
+              label="Completed"
+              value={`${counts.completed} (${pct.completed.toFixed(1)}%)`}
+            />
+            <Legend
+              dot="#dc2626"
+              label="Cancelled"
+              value={`${counts.cancelled} (${pct.cancelled.toFixed(1)}%)`}
+            />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-6">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
           <h2 className="text-lg font-bold text-slate-900">
-            {monthName(month)} {year}
+            Bookings Calendar
           </h2>
           <div className="flex items-center gap-2">
             <button
@@ -250,6 +318,34 @@ export default function BookingsPage() {
             })}
           </div>
         )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {TABS.map((t) => {
+          const active = activeTab === t.key;
+          const cls: Record<string, string> = {
+            blue: active
+              ? "bg-[#0a7a90] text-white"
+              : "bg-white text-slate-600 hover:bg-slate-100",
+            emerald: active
+              ? "bg-emerald-600 text-white"
+              : "bg-white text-slate-600 hover:bg-slate-100",
+            rose: active
+              ? "bg-red-600 text-white"
+              : "bg-white text-slate-600 hover:bg-slate-100",
+          };
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setActiveTab(t.key)}
+              className={`h-12 rounded-xl border border-slate-200 font-semibold text-sm transition-colors ${cls[t.tone]}`}
+            >
+              {t.label} ({String(counts[t.key]).padStart(2, "0")})
+            </button>
+          );
+        })}
       </div>
 
       <div>
@@ -353,5 +449,73 @@ export default function BookingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function Legend({
+  dot,
+  label,
+  value,
+}: {
+  dot: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className="h-3 w-3 rounded-full inline-block"
+        style={{ backgroundColor: dot }}
+      />
+      <div>
+        <div className="text-slate-700 font-medium">{label}</div>
+        <div className="text-slate-500 text-[10px]">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function DonutChart({
+  data,
+}: {
+  data: { value: number; color: string; label: string }[];
+}) {
+  const total = data.reduce((a, b) => a + b.value, 0) || 1;
+  const r = 70;
+  const c = 2 * Math.PI * r;
+
+  let acc = 0;
+  return (
+    <svg viewBox="0 0 200 200" className="w-40 sm:w-48 md:w-52 h-auto">
+      <g transform="translate(100,100) rotate(-90)">
+        <circle
+          r={r}
+          cx="0"
+          cy="0"
+          fill="none"
+          stroke="#f1f5f9"
+          strokeWidth="22"
+        />
+        {data.map((d, i) => {
+          const len = (d.value / total) * c;
+          const off = -acc;
+          acc += len;
+          if (d.value === 0) return null;
+          return (
+            <circle
+              key={i}
+              r={r}
+              cx="0"
+              cy="0"
+              fill="none"
+              stroke={d.color}
+              strokeWidth="22"
+              strokeDasharray={`${len} ${c}`}
+              strokeDashoffset={off}
+            />
+          );
+        })}
+      </g>
+    </svg>
   );
 }

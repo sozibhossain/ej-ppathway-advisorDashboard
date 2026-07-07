@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { ApiError, api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { useToast } from "../lib/toast";
 import {
   fmtNumber,
   fmtTime,
@@ -23,7 +25,6 @@ import {
   AwardIcon,
   ZapIcon,
   ChevronRightIcon,
-  UserIcon,
   ChatIcon,
   VideoIcon,
   PhoneIcon,
@@ -101,10 +102,14 @@ const populated = (
 };
 
 export default function DashboardHome() {
+  const router = useRouter();
+  const toast = useToast();
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => new Date());
+  const [range, setRange] = useState<"today" | "week" | "month">("today");
+  const [startingSupport, setStartingSupport] = useState(false);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -115,7 +120,7 @@ export default function DashboardHome() {
     let cancel = false;
     (async () => {
       try {
-        const r = await api.get<DashboardData>("/advisor/dashboard");
+        const r = await api.get<DashboardData>("/advisor/dashboard", { range });
         if (!cancel) setData(r.data || null);
       } catch {
         // ignore
@@ -126,7 +131,7 @@ export default function DashboardHome() {
     return () => {
       cancel = true;
     };
-  }, []);
+  }, [range]);
 
   if (loading)
     return (
@@ -156,6 +161,20 @@ export default function DashboardHome() {
   const values = [2, 3, 4, 5, 6, 7, 1].map((d) => curve[d] || 0);
   const max = Math.max(...values, 1);
 
+  const startAdminChat = async () => {
+    setStartingSupport(true);
+    try {
+      const r = await api.post<{ _id: string }>("/chats/admin", {});
+      router.push(`/support${r.data?._id ? `?chatId=${r.data._id}` : ""}`);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Could not start support chat");
+    } finally {
+      setStartingSupport(false);
+    }
+  };
+
+  const rangeLabel = range === "week" ? "This Week" : range === "month" ? "This Month" : "Today";
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
@@ -167,18 +186,36 @@ export default function DashboardHome() {
             Here&apos;s what&apos;s happening with your sessions today.
           </p>
         </div>
-        <Link
-          href="/notifications"
-          className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#0a7a90] text-white text-sm font-medium hover:bg-[#076377]"
+        <button
+          type="button"
+          onClick={startAdminChat}
+          disabled={startingSupport}
+          className="inline-flex items-center gap-2 px-4 h-10 rounded-lg bg-[#0a7a90] text-white text-sm font-medium hover:bg-[#076377] disabled:opacity-60"
         >
           <ChatIcon size={16} />
-          Chat with admin
-        </Link>
+          {startingSupport ? "Opening chat..." : "Chat with admin"}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex items-center justify-end">
+        <label className="text-sm font-medium text-slate-600 mr-2" htmlFor="dashboard-range">
+          View
+        </label>
+        <select
+          id="dashboard-range"
+          value={range}
+          onChange={(e) => setRange(e.target.value as "today" | "week" | "month")}
+          className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 focus:outline-none focus:border-[#0a7a90]"
+        >
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
-          title="Earnings Today"
+          title={`Earnings ${rangeLabel}`}
           value={fmtCredits(data?.earningsToday || 0)}
           trend="+14%"
           tone="emerald"
@@ -190,13 +227,6 @@ export default function DashboardHome() {
           trend="+20%"
           tone="blue"
           icon={<ZapIcon size={18} />}
-        />
-        <StatCard
-          title="Pending Requests"
-          value={fmtNumber(data?.pendingRequests || 0).padStart(2, "0")}
-          trend="+5%"
-          tone="amber"
-          icon={<UserIcon size={18} />}
         />
         <StatCard
           title="Overall Ratings & Tier"

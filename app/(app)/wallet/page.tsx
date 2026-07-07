@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { api, ApiError } from "../../lib/api";
 import { useToast } from "../../lib/toast";
 import { useAuth } from "../../lib/auth-context";
@@ -30,10 +31,13 @@ type Range = "all" | "today" | "week" | "month";
 export default function WalletPage() {
   const toast = useToast();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [overview, setOverview] = useState<EarningsOverview | null>(null);
   const [loadingOverview, setLoadingOverview] = useState(true);
 
-  const [tab, setTab] = useState<"earnings" | "withdrawals">("earnings");
+  const [tab, setTab] = useState<"earnings" | "withdrawals">(
+    searchParams.get("tab") === "withdrawals" ? "withdrawals" : "earnings",
+  );
   const [range, setRange] = useState<Range>("all");
   const [items, setItems] = useState<TransactionDoc[]>([]);
   const [loadingTab, setLoadingTab] = useState(false);
@@ -101,6 +105,11 @@ export default function WalletPage() {
     loadOverview();
     loadPayout();
   }, []);
+
+  useEffect(() => {
+    const queryTab = searchParams.get("tab");
+    setTab(queryTab === "withdrawals" ? "withdrawals" : "earnings");
+  }, [searchParams]);
 
   useEffect(() => {
     loadTab();

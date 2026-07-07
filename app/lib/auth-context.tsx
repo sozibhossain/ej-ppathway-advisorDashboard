@@ -143,31 +143,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loading, user, pathname, router]);
 
-  useEffect(() => {
-    if (loading || !user) return;
-    if (isOpenPath(pathname)) return;
-    if (pathname?.startsWith(PROFILE_PATH)) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const nextPath = await getAdvisorProfileRedirectPath();
-        if (cancelled) return;
-        if (nextPath === PROFILE_PATH) {
-          router.replace(nextPath);
-        } else if (isPublicPath(pathname)) {
-          router.replace(nextPath);
-        }
-      } catch {
-        if (!cancelled) router.replace(PROFILE_PATH);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, user, pathname, router]);
-
   const login = useCallback(
     async (email: string, password: string) => {
       const r = await api.post<{

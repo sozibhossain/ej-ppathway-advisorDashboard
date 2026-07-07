@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
@@ -26,6 +27,8 @@ import {
   UserIcon,
   MailIcon,
   PhoneIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ChevronDownIcon,
 } from "../../components/Icons";
 import { Combobox } from "../../components/ui/Combobox";
@@ -33,27 +36,19 @@ import { Combobox } from "../../components/ui/Combobox";
 import type {
   AdvisorProfile,
   AdvisorUser,
+  DateAvailability,
+  DaySchedule,
   PerformanceData,
   PromotionPlans,
   ReviewDoc,
+  ScheduleSlot,
 } from "../../lib/types";
 
 type TabKey =
   | "personal"
-  | "expertise"
   | "pricing"
-  | "reviews"
   | "performance"
   | "promotion";
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "personal", label: "Personal Information" },
-  { key: "expertise", label: "Expertise and Certificates" },
-  { key: "pricing", label: "Pricing & Availabilities" },
-  { key: "reviews", label: "Reviews & Ratings" },
-  { key: "performance", label: "Performance & Tier" },
-  { key: "promotion", label: "Promotion Tools" },
-];
 
 const SUGGESTED_SKILLS = [
   "Love & Relationship",
@@ -121,11 +116,11 @@ function normalizeProfileForEdit(profile: AdvisorProfile) {
     ...profile,
     pricing: {
       ...profile.pricing,
-      chatPerMin: 0,
-      callPerMin: 0,
-      videoPerMin: 0,
+      chatPerMin: Number(profile.pricing?.chatPerMin ?? 0),
+      callPerMin: Number(profile.pricing?.callPerMin ?? 0),
+      videoPerMin: Number(profile.pricing?.videoPerMin ?? 0),
     },
-    autoOnlineMode: false,
+    autoOnlineMode: !!profile.autoOnlineMode,
     weeklySchedule: Object.fromEntries(
       [
         "monday",
@@ -137,19 +132,105 @@ function normalizeProfileForEdit(profile: AdvisorProfile) {
         "sunday",
       ].map((day) => [
         day,
-        {
-          ...(profile.weeklySchedule?.[day] || { from: "09:00", to: "18:00" }),
-          enabled: false,
-        },
+        normalizeDaySchedule(profile.weeklySchedule?.[day]),
       ]),
     ),
+    dateAvailability: normalizeDateAvailability(profile.dateAvailability),
+  };
+}
+
+function normalizeDaySchedule(schedule?: Partial<DaySchedule>): DaySchedule {
+  const fallback = { from: "09:00", to: "18:00" };
+  const slots = Array.isArray(schedule?.slots) && schedule.slots.length
+    ? schedule.slots
+    : [{ from: schedule?.from || fallback.from, to: schedule?.to || fallback.to }];
+  const cleanSlots = slots.map(normalizeSlot).filter((slot) => slot.from && slot.to);
+  const first = cleanSlots[0] || fallback;
+  return {
+    enabled: !!schedule?.enabled,
+    from: first.from,
+    to: first.to,
+    slots: cleanSlots.length ? cleanSlots : [fallback],
+  };
+}
+
+function normalizeSlot(slot: Partial<ScheduleSlot>): ScheduleSlot {
+  return {
+    from: slot.from || "09:00",
+    to: slot.to || "18:00",
+  };
+}
+
+function normalizeDateAvailability(
+  value?: Record<string, Partial<DateAvailability>>,
+) {
+  const normalized: Record<string, DateAvailability> = {};
+  for (const [date, schedule] of Object.entries(value || {})) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const slots = (schedule.slots || [])
+      .map(normalizeSlot)
+      .filter((slot) => slot.from && slot.to);
+    normalized[date] = {
+      unavailable: schedule.unavailable === true,
+      slots: schedule.unavailable === true ? [] : slots,
+    };
+  }
+  return normalized;
+}
+
+function setDaySchedule(
+  p: AdvisorProfile,
+  setP: (next: AdvisorProfile) => void,
+  day: string,
+  schedule: DaySchedule,
+) {
+  const normalized = normalizeDaySchedule(schedule);
+  setP({
+    ...p,
+    weeklySchedule: {
+      ...(p.weeklySchedule || {}),
+      [day]: normalized,
+    },
+  });
+}
+
+function tabFromQuery(value: string | null): TabKey {
+  if (value === "pricing") return "pricing";
+  if (value === "reviews") return "performance";
+  if (value === "promotion") return "promotion";
+  return "personal";
+}
+
+function profileHeading(tab: TabKey) {
+  if (tab === "pricing") {
+    return {
+      title: "Pricing",
+      description: "Manage your session rates and availability settings.",
+    };
+  }
+  if (tab === "performance") {
+    return {
+      title: "Reviews",
+      description: "Review client feedback and performance metrics.",
+    };
+  }
+  if (tab === "promotion") {
+    return {
+      title: "Promotion Tools",
+      description: "Boost your advisor profile and track campaign visibility.",
+    };
+  }
+  return {
+    title: "Profile Management",
+    description: "Manage your profile, expertise and pricing",
   };
 }
 
 export default function ProfilePage() {
   const toast = useToast();
   const { user, refreshMe } = useAuth();
-  const [tab, setTab] = useState<TabKey>("personal");
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<TabKey>(tabFromQuery(searchParams.get("tab")));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [u, setU] = useState<AdvisorUser | null>(null);
@@ -177,13 +258,17 @@ export default function ProfilePage() {
     };
   }, []);
 
+  useEffect(() => {
+    setTab(tabFromQuery(searchParams.get("tab")));
+  }, [searchParams]);
+
   const save = async () => {
     if (!u || !p) return;
     setSaving(true);
     try {
       const browserTimezone =
         Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-      await api.patch("/advisor/profile", {
+      const res = await api.patch("/advisor/profile", {
         name: u.name,
         phone: u.phone,
         country: u.country,
@@ -192,7 +277,6 @@ export default function ProfilePage() {
           u.timezone && u.timezone !== "UTC" ? u.timezone : browserTimezone,
         professionalTitle: p.professionalTitle,
         bio: p.bio,
-        detailedDescription: p.detailedDescription,
         yearsOfExperience: p.yearsOfExperience,
         expertise: p.expertise,
         styles: p.styles,
@@ -200,8 +284,9 @@ export default function ProfilePage() {
         pricing: p.pricing,
         autoOnlineMode: p.autoOnlineMode,
         weeklySchedule: p.weeklySchedule,
+        dateAvailability: p.dateAvailability,
       });
-      toast.success("Profile saved");
+      toast.success(res.message || "Profile saved");
       refreshMe();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Save failed");
@@ -218,56 +303,50 @@ export default function ProfilePage() {
       </div>
     );
 
+  const heading = profileHeading(tab);
+  const canSave = tab === "personal" || tab === "pricing";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
-            Profile Management
+            {heading.title}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Manage your profile, expertise and pricing
+            {heading.description}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {tab === "personal" ? (
           <Link href="/profile/preview">
             <Button variant="outline">
               <EyeIcon size={16} />
               Preview Profile
             </Button>
           </Link>
+          ) : null}
+          {canSave ? (
           <Button onClick={save} loading={saving}>
             Save Changes
           </Button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200 p-2 overflow-x-auto">
-        <div className="flex gap-1 min-w-max">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`flex-1 px-4 h-11 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                tab === t.key
-                  ? "bg-[#0a7a90] text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+          ) : null}
         </div>
       </div>
 
       {tab === "personal" && u && p && (
-        <PersonalTab u={u} p={p} setU={setU} setP={setP} onProfileUpdate={refreshMe} />
+        <div className="space-y-6">
+          <PersonalTab u={u} p={p} setU={setU} setP={setP} onProfileUpdate={refreshMe} />
+          <ExpertiseTab p={p} setP={setP} />
+        </div>
       )}
-      {tab === "expertise" && p && <ExpertiseTab p={p} setP={setP} />}
       {tab === "pricing" && p && <PricingTab p={p} setP={setP} />}
-      {tab === "reviews" && <ReviewsTab />}
-      {tab === "performance" && <PerformanceTab />}
+      {tab === "performance" && (
+        <div className="space-y-6">
+          <PerformanceTab />
+          <ReviewsTab />
+        </div>
+      )}
       {tab === "promotion" && <PromotionTab />}
     </div>
   );
@@ -426,7 +505,7 @@ function PersonalTab({
         </div>
 
         <div>
-          <h3 className="font-semibold text-slate-900">Intro Audio or Video</h3>
+          <h3 className="font-semibold text-slate-900">Voice Note or Intro Video</h3>
           <div className="rounded-xl bg-slate-100 aspect-video mt-3 overflow-hidden flex items-center justify-center">
             {p.introVideoUrl ? (
               // eslint-disable-next-line jsx-a11y/media-has-caption
@@ -436,7 +515,7 @@ function PersonalTab({
                 <video src={p.introVideoUrl} controls className="w-full h-full" />
               )
             ) : (
-              <div className="text-slate-500 text-sm">No intro media</div>
+              <div className="text-slate-500 text-sm">No voice note or intro video</div>
             )}
           </div>
           <Button
@@ -447,7 +526,7 @@ function PersonalTab({
             loading={vidUploading}
           >
             <UploadIcon size={14} />
-            Upload New Audio or Video
+            Upload Voice Note or Video
           </Button>
           <input
             ref={videoRef}
@@ -529,17 +608,11 @@ function PersonalTab({
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="mt-4">
           <FormTextarea
             label="Brief Bio"
             value={p.bio || ""}
             onChange={(v) => setP({ ...p, bio: v })}
-            rows={6}
-          />
-          <FormTextarea
-            label="Detailed Description"
-            value={p.detailedDescription || ""}
-            onChange={(v) => setP({ ...p, detailedDescription: v })}
             rows={6}
           />
         </div>
@@ -892,16 +965,6 @@ function PricingTab({
   p: AdvisorProfile;
   setP: (next: AdvisorProfile) => void;
 }) {
-  const days = [
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
-  ];
-
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-8">
       <div>
@@ -955,73 +1018,281 @@ function PricingTab({
         </div>
       </div>
 
-      <div>
-        <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-          <CalendarIcon /> Weekly Schedule
+      <DateAvailabilityCalendar p={p} setP={setP} />
+    </div>
+  );
+}
+
+function DateAvailabilityCalendar({
+  p,
+  setP,
+}: {
+  p: AdvisorProfile;
+  setP: (next: AdvisorProfile) => void;
+}) {
+  const today = new Date();
+  const [viewMonth, setViewMonth] = useState(() => monthStart(today));
+  const [selectedDate, setSelectedDate] = useState(() => dateKey(today));
+  const availability = p.dateAvailability || {};
+  const selectedRule = availability[selectedDate] || { unavailable: false, slots: [] };
+  const selectedSlots = selectedRule.unavailable ? [] : selectedRule.slots || [];
+  const cells = calendarCells(viewMonth);
+
+  const patchDate = (date: string, patch: DateAvailability) => {
+    setP({
+      ...p,
+      dateAvailability: {
+        ...(p.dateAvailability || {}),
+        [date]: patch,
+      },
+    });
+  };
+
+  const updateSlot = (index: number, patch: Partial<ScheduleSlot>) => {
+    const slots = selectedSlots.map((slot, i) =>
+      i === index ? { ...slot, ...patch } : slot,
+    );
+    patchDate(selectedDate, { unavailable: false, slots });
+  };
+
+  const addSlot = () => {
+    patchDate(selectedDate, {
+      unavailable: false,
+      slots: [...selectedSlots, { from: "09:00", to: "18:00" }],
+    });
+  };
+
+  const removeSlot = (index: number) => {
+    patchDate(selectedDate, {
+      unavailable: false,
+      slots: selectedSlots.filter((_, i) => i !== index),
+    });
+  };
+
+  const markUnavailable = (unavailable: boolean) => {
+    patchDate(selectedDate, {
+      unavailable,
+      slots: unavailable
+        ? []
+        : selectedSlots.length
+          ? selectedSlots
+          : [{ from: "09:00", to: "18:00" }],
+    });
+  };
+
+  return (
+    <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+          <CalendarIcon /> Availability Calendar
         </h3>
-        <div className="space-y-2">
-          {days.map((d) => {
-            const sched = p.weeklySchedule?.[d] || {
-              enabled: false,
-              from: "09:00",
-              to: "18:00",
-            };
-            return (
-              <div
-                key={d}
-                className="bg-slate-50 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap"
-              >
-                <div className="font-semibold text-slate-900 capitalize w-24 sm:w-28">
-                  {d}
-                </div>
-                <div className="flex items-center gap-2">
-                  <TimeInput
-                    value={sched.from}
-                    onChange={(v) =>
-                      setP({
-                        ...p,
-                        weeklySchedule: {
-                          ...(p.weeklySchedule || {}),
-                          [d]: { ...sched, from: v },
-                        },
-                      })
-                    }
-                  />
-                  <span className="text-xs text-slate-500">To</span>
-                  <TimeInput
-                    value={sched.to}
-                    onChange={(v) =>
-                      setP({
-                        ...p,
-                        weeklySchedule: {
-                          ...(p.weeklySchedule || {}),
-                          [d]: { ...sched, to: v },
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="ml-auto">
-                  <Toggle
-                    checked={!!sched.enabled}
-                    onChange={(v) =>
-                      setP({
-                        ...p,
-                        weeklySchedule: {
-                          ...(p.weeklySchedule || {}),
-                          [d]: { ...sched, enabled: v },
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setViewMonth(addMonths(viewMonth, -1))}
+            className="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-600 inline-flex items-center justify-center hover:bg-slate-50"
+            aria-label="Previous month"
+          >
+            <ChevronLeftIcon size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const now = new Date();
+              setViewMonth(monthStart(now));
+              setSelectedDate(dateKey(now));
+            }}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMonth(addMonths(viewMonth, 1))}
+            className="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-600 inline-flex items-center justify-center hover:bg-slate-50"
+            aria-label="Next month"
+          >
+            <ChevronRightIcon size={16} />
+          </button>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-5">
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div className="font-bold text-slate-900">
+              {viewMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </div>
+            <div className="flex items-center gap-4 text-xs text-slate-500">
+              <LegendDot className="bg-emerald-400" label="Available" />
+              <LegendDot className="bg-slate-300" label="Unavailable" />
+            </div>
+          </div>
+          <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50 text-center text-[11px] font-bold uppercase text-slate-500">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+              <div key={day} className="py-2">{day}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {cells.map((cell) => {
+              const key = dateKey(cell);
+              const rule = availability[key];
+              const unavailable = rule?.unavailable === true;
+              const slotCount = rule?.slots?.length || 0;
+              const isCurrentMonth = cell.getMonth() === viewMonth.getMonth();
+              const isSelected = key === selectedDate;
+              const isToday = key === dateKey(today);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSelectedDate(key)}
+                  className={`min-h-24 border-r border-b border-slate-100 p-2 text-left transition-colors ${
+                    isSelected
+                      ? "bg-[#e6f2f6] ring-2 ring-inset ring-[#0a7a90]"
+                      : unavailable
+                        ? "bg-slate-100 text-slate-400"
+                        : slotCount
+                          ? "bg-emerald-50"
+                          : "bg-white hover:bg-slate-50"
+                  } ${isCurrentMonth ? "" : "opacity-45"}`}
+                >
+                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold ${
+                    isToday ? "bg-[#0a7a90] text-white" : "text-slate-700"
+                  }`}>
+                    {cell.getDate()}
+                  </span>
+                  <div className="mt-2 min-h-5">
+                    {unavailable ? (
+                      <span className="text-xs font-semibold text-slate-500">Unavailable</span>
+                    ) : slotCount ? (
+                      <span className="text-xs font-semibold text-emerald-700">
+                        {slotCount} Slot{slotCount === 1 ? "" : "s"}
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <aside className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-500">Selected Date</div>
+              <h4 className="mt-1 text-lg font-bold text-slate-900">
+                {formatDateLabel(selectedDate)}
+              </h4>
+            </div>
+            <Toggle checked={!selectedRule.unavailable} onChange={(v) => markUnavailable(!v)} />
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h5 className="font-semibold text-slate-900">Available Time Slots</h5>
+              <button
+                type="button"
+                onClick={addSlot}
+                disabled={selectedRule.unavailable}
+                className="text-sm font-semibold text-[#0a7a90] hover:underline disabled:text-slate-400 disabled:no-underline"
+              >
+                + Add Time Slot
+              </button>
+            </div>
+
+            {selectedRule.unavailable ? (
+              <div className="rounded-xl bg-slate-100 p-4 text-sm font-semibold text-slate-500">
+                This day is marked unavailable.
+              </div>
+            ) : selectedSlots.length ? (
+              selectedSlots.map((slot, index) => (
+                <div key={`${selectedDate}-${index}`} className="flex items-center gap-2">
+                  <TimeInput value={slot.from} onChange={(v) => updateSlot(index, { from: v })} />
+                  <span className="text-xs text-slate-500">To</span>
+                  <TimeInput value={slot.to} onChange={(v) => updateSlot(index, { to: v })} />
+                  <button
+                    type="button"
+                    onClick={() => removeSlot(index)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-red-600"
+                    aria-label="Remove time slot"
+                  >
+                    <TrashIcon size={15} />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
+                No slots added for this day.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-2">
+            <button
+              type="button"
+              onClick={() => markUnavailable(true)}
+              className="h-10 rounded-lg border border-red-200 bg-white text-sm font-semibold text-red-600 hover:bg-red-50"
+            >
+              Mark as Unavailable
+            </button>
+            <button
+              type="button"
+              onClick={() => markUnavailable(false)}
+              className="h-10 rounded-lg bg-[#0a7a90] text-sm font-semibold text-white hover:bg-[#076377]"
+            >
+              Mark as Available
+            </button>
+          </div>
+        </aside>
       </div>
     </div>
   );
+}
+
+function LegendDot({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className={`h-2 w-2 rounded-full ${className}`} />
+      {label}
+    </span>
+  );
+}
+
+function monthStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date: Date, amount: number) {
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+}
+
+function calendarCells(month: Date) {
+  const first = monthStart(month);
+  const start = new Date(first);
+  start.setDate(first.getDate() - first.getDay());
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date;
+  });
+}
+
+function dateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatDateLabel(key: string) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function TimeInput({
@@ -1638,53 +1909,25 @@ function PromotionTab() {
       </div>
     );
 
-  const impPerDay = (k: "basic" | "pro" | "premium") => {
-    const v = plans?.[k]?.impressionsPerDay;
-    return typeof v === "number" ? v : Number(v) || 0;
-  };
-  const planCards = [
-    {
-      key: "basic",
-      title: "Basic Boost",
-      price: plans.basic?.price ?? 29,
-      days: plans.basic?.days ?? 7,
-      tone: "emerald",
-      features: [
-        "2x profile visibility",
-        `${impPerDay("basic") || 100} impressions/day`,
-        "Standard placement",
-      ],
-    },
-    {
-      key: "pro",
-      title: "Pro Featured",
-      price: plans.pro?.price ?? 79,
-      days: plans.pro?.days ?? 14,
-      tone: "violet",
-      features: [
-        "5x profile visibility",
-        `${impPerDay("pro") || 500} impressions/day`,
-        "Featured in category",
-        "Top of search results",
-      ],
-    },
-    {
-      key: "premium",
-      title: "Premium Spotlight",
-      price: plans.premium?.price ?? 149,
-      days: plans.premium?.days ?? 30,
-      tone: "amber",
-      features: [
-        "10x profile visibility",
-        impPerDay("premium") > 0
-          ? `${impPerDay("premium")} impressions/day`
-          : "Unlimited impressions",
-        "Homepage featured",
-        "Top search placement",
-        "Social media promotion",
-      ],
-    },
-  ];
+  const planCards = Object.entries(plans)
+    .map(([key, plan], index) => {
+      const impressions = Number(plan.impressionsPerDay || 0);
+      const fallbackFeatures = [
+        `${Number(plan.visibilityBoost || 1)}x profile visibility`,
+        impressions > 0 ? `${impressions} impressions/day` : "Unlimited impressions",
+      ];
+      return {
+        key,
+        title: plan.label || tierLabel(key),
+        price: Number(plan.price || 0),
+        days: Number(plan.days || 1),
+        tone: plan.tone || "emerald",
+        isPopular: plan.isPopular === true,
+        sortOrder: Number(plan.sortOrder ?? index + 1),
+        features: plan.features?.length ? plan.features : fallbackFeatures,
+      };
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
 
   return (
     <div className="space-y-6">
@@ -1697,7 +1940,7 @@ function PromotionTab() {
       </div>
 
       {active && (() => {
-        const planCfg = plans?.[active.plan as keyof PromotionPlans];
+        const planCfg = plans?.[active.plan];
         const perDay = Number(planCfg?.impressionsPerDay) || 0;
         const cap = perDay > 0 ? perDay * (planCfg?.days || 0) : 0;
         const used = active.impressions || 0;
@@ -1714,13 +1957,7 @@ function PromotionTab() {
               <div>
                 <div className="text-xs text-slate-500 mb-1">Plan</div>
                 <div className="font-bold text-slate-900">
-                  {active.plan === "pro"
-                    ? "Pro Featured"
-                    : active.plan === "premium"
-                      ? "Premium Spotlight"
-                      : active.plan === "basic"
-                        ? "Basic Boost"
-                        : tierLabel(active.plan)}
+                  {planCfg?.label || tierLabel(active.plan)}
                 </div>
               </div>
               <div>
@@ -1756,7 +1993,7 @@ function PromotionTab() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {planCards.map((p) => {
           const isActive = active?.plan === p.key;
-          const isPopular = p.key === "pro";
+          const isPopular = p.isPopular;
           return (
             <div
               key={p.key}
@@ -1765,7 +2002,9 @@ function PromotionTab() {
                   ? "bg-violet-100 border-violet-300"
                   : p.tone === "amber"
                     ? "bg-amber-50 border-amber-200"
-                    : "bg-white border-slate-200"
+                    : p.tone === "sky"
+                      ? "bg-sky-50 border-sky-200"
+                      : "bg-white border-slate-200"
               }`}
             >
               {isPopular && (
@@ -1780,6 +2019,8 @@ function PromotionTab() {
                     ? "bg-violet-200 text-violet-700"
                     : p.tone === "amber"
                       ? "bg-amber-200 text-amber-600"
+                      : p.tone === "sky"
+                        ? "bg-sky-100 text-sky-700"
                       : "bg-emerald-100 text-emerald-600"
                 }`}
               >
@@ -1788,7 +2029,7 @@ function PromotionTab() {
               <div className="text-2xl font-bold text-slate-900">{p.title}</div>
               <div className="mt-3 mb-5">
                 <span className="text-4xl font-bold text-slate-900">
-                  ${p.price}
+                  ${p.price.toLocaleString()}
                 </span>
                 <span className="text-xs text-slate-500 ml-1">
                   /{p.days} days
@@ -1809,10 +2050,12 @@ function PromotionTab() {
                 className={`mt-auto w-full h-12 rounded-lg font-semibold text-sm transition-colors ${
                   isActive
                     ? "bg-emerald-600 text-white"
-                    : p.key === "pro"
+                    : p.tone === "violet"
                       ? "bg-[#0a7a90] text-white hover:bg-[#076377]"
-                      : p.key === "premium"
+                      : p.tone === "amber"
                         ? "bg-white text-[#0a7a90] border border-amber-300 hover:bg-amber-100"
+                        : p.tone === "sky"
+                          ? "bg-sky-600 text-white hover:bg-sky-700"
                         : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                 } disabled:opacity-60`}
               >

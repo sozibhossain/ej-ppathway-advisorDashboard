@@ -15,9 +15,9 @@ export default function AppLayout({
   if (!user) return null;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-[#f8fafc]">
       <Topbar />
-      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <main className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 pt-24 md:ml-64">
         {children}
       </main>
     </div>

@@ -40,10 +40,15 @@ const contractTokenOf = (n: NotificationDoc): string | undefined =>
     ? (n.data?.contractToken as string | undefined)
     : undefined);
 
+const chatIdOf = (n: NotificationDoc): string | undefined =>
+  (n.data?.chatId || n.data?.chat) as string | undefined;
+
 // The in-app destination for a notification, or null if it isn't navigable.
 const linkFor = (n: NotificationDoc): string | null => {
   const token = contractTokenOf(n);
   if (token) return `/contract/sign?token=${encodeURIComponent(token)}`;
+  const chatId = chatIdOf(n);
+  if (chatId) return `/support?chatId=${encodeURIComponent(chatId)}`;
   const sid = sessionIdOf(n);
   if (sid) return `/sessions/${sid}`;
   return null;
