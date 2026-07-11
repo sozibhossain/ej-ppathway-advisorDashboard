@@ -91,6 +91,9 @@ export default function PreviewProfile() {
     (s) => reviews.filter((r) => Math.round(r.rating || 0) === s).length
   );
   const breakdown = profile.ratingBreakdown || {};
+  const audioMessageUrl =
+    profile.audioMessageUrl || (profile.introVideoUrl && isAudioMediaUrl(profile.introVideoUrl) ? profile.introVideoUrl : "");
+  const introVideoUrl = profile.introVideoUrl && !isAudioMediaUrl(profile.introVideoUrl) ? profile.introVideoUrl : "";
 
   return (
     <div className="space-y-4">
@@ -305,22 +308,24 @@ export default function PreviewProfile() {
         </div>
 
         <div className="space-y-4">
-          {profile.introVideoUrl ? (
+          {audioMessageUrl ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <h3 className="font-bold text-slate-900 mb-3">Intro media</h3>
+              <h3 className="font-bold text-slate-900 mb-3">Listen to Message</h3>
+              <div className="rounded-xl overflow-hidden bg-slate-100 px-4 py-5">
+                <audio src={audioMessageUrl} controls className="w-full" />
+              </div>
+            </div>
+          ) : null}
+
+          {introVideoUrl ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <h3 className="font-bold text-slate-900 mb-3">Intro Video</h3>
               <div className="rounded-xl overflow-hidden aspect-video bg-slate-100">
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                {isAudioMediaUrl(profile.introVideoUrl) ? (
-                  <div className="flex h-full items-center px-4">
-                    <audio src={profile.introVideoUrl} controls className="w-full" />
-                  </div>
-                ) : (
-                  <video
-                    src={profile.introVideoUrl}
-                    controls
-                    className="w-full h-full"
-                  />
-                )}
+                <video
+                  src={introVideoUrl}
+                  controls
+                  className="w-full h-full"
+                />
               </div>
             </div>
           ) : null}
