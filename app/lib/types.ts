@@ -74,6 +74,7 @@ export type AdvisorProfile = {
   expertise: string[];
   styles: string[];
   languages: string[];
+  audioMessageUrl?: string;
   introVideoUrl?: string;
   pricing: AdvisorPricing;
   autoOnlineMode?: boolean;

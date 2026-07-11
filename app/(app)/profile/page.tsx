@@ -369,8 +369,10 @@ function PersonalTab({
   const countries = useCountries();
   const cities = useCities(u.country);
   const photoRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [audioUploading, setAudioUploading] = useState(false);
   const [vidUploading, setVidUploading] = useState(false);
   const [photoCropFile, setPhotoCropFile] = useState<File | null>(null);
   const [photoCropPreview, setPhotoCropPreview] = useState("");
@@ -432,24 +434,45 @@ function PersonalTab({
     }
   };
 
-  const onUploadVideo = async (file: File) => {
-    setVidUploading(true);
+  const onUploadIntroMedia = async (file: File, expectedType: "audio" | "video") => {
+    const isAudio = file.type.startsWith("audio/");
+    if (expectedType === "audio" && !isAudio) {
+      toast.error("Please choose an audio file");
+      return;
+    }
+    if (expectedType === "video" && !file.type.startsWith("video/")) {
+      toast.error("Please choose a video file");
+      return;
+    }
+    if (expectedType === "audio") setAudioUploading(true);
+    else setVidUploading(true);
     try {
       const fd = new FormData();
       fd.append("video", file);
-      const r = await api.post<{ url: string }>(
+      const r = await api.post<{ url: string; mediaType?: "audio" | "video"; field?: "audioMessageUrl" | "introVideoUrl" }>(
         "/advisor/application/intro-video",
         fd,
         { isFormData: true }
       );
-      if (r.data?.url) setP({ ...p, introVideoUrl: r.data.url });
-      toast.success("Intro media uploaded");
+      if (r.data?.url) {
+        if ((r.data.mediaType || expectedType) === "audio") {
+          setP({ ...p, audioMessageUrl: r.data.url });
+        } else {
+          setP({ ...p, introVideoUrl: r.data.url });
+        }
+      }
+      toast.success(expectedType === "audio" ? "Audio message uploaded" : "Intro video uploaded");
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Upload failed");
     } finally {
-      setVidUploading(false);
+      if (expectedType === "audio") setAudioUploading(false);
+      else setVidUploading(false);
     }
   };
+
+  const audioMessageUrl =
+    p.audioMessageUrl || (p.introVideoUrl && isAudioMediaUrl(p.introVideoUrl) ? p.introVideoUrl : "");
+  const introVideoUrl = p.introVideoUrl && !isAudioMediaUrl(p.introVideoUrl) ? p.introVideoUrl : "";
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -505,17 +528,43 @@ function PersonalTab({
         </div>
 
         <div>
-          <h3 className="font-semibold text-slate-900">Voice Note or Intro Video</h3>
-          <div className="rounded-xl bg-slate-100 aspect-video mt-3 overflow-hidden flex items-center justify-center">
-            {p.introVideoUrl ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              isAudioMediaUrl(p.introVideoUrl) ? (
-                <audio src={p.introVideoUrl} controls className="w-full px-4" />
-              ) : (
-                <video src={p.introVideoUrl} controls className="w-full h-full" />
-              )
+          <h3 className="font-semibold text-slate-900">Audio Message</h3>
+          <div className="rounded-xl bg-slate-100 mt-3 min-h-28 overflow-hidden flex items-center justify-center px-4">
+            {audioMessageUrl ? (
+              <audio src={audioMessageUrl} controls className="w-full" />
             ) : (
-              <div className="text-slate-500 text-sm">No voice note or intro video</div>
+              <div className="text-slate-500 text-sm">No audio message uploaded</div>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full mt-3"
+            onClick={() => audioRef.current?.click()}
+            loading={audioUploading}
+          >
+            <UploadIcon size={14} />
+            Upload Audio Message
+          </Button>
+          <input
+            ref={audioRef}
+            type="file"
+            accept="audio/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onUploadIntroMedia(f, "audio");
+            }}
+          />
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-slate-900">Intro Video</h3>
+          <div className="rounded-xl bg-slate-100 aspect-video mt-3 overflow-hidden flex items-center justify-center">
+            {introVideoUrl ? (
+              <video src={introVideoUrl} controls className="w-full h-full" />
+            ) : (
+              <div className="text-slate-500 text-sm">No intro video uploaded</div>
             )}
           </div>
           <Button
@@ -526,16 +575,16 @@ function PersonalTab({
             loading={vidUploading}
           >
             <UploadIcon size={14} />
-            Upload Voice Note or Video
+            Upload Intro Video
           </Button>
           <input
             ref={videoRef}
             type="file"
-            accept="audio/*,video/*"
+            accept="video/*"
             hidden
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) onUploadVideo(f);
+              if (f) onUploadIntroMedia(f, "video");
             }}
           />
         </div>
