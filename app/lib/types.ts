@@ -54,6 +54,27 @@ export type AdvisorPricing = {
   videoPerMin: number;
 };
 
+export type AdvisorSessionTypes = {
+  chat: boolean;
+  call: boolean;
+  video: boolean;
+};
+
+export type AvailabilitySettings = {
+  minNoticeMinutes: number;
+  bookingWindowDays: number;
+  bufferMinutes: number;
+  defaultDurationMinutes: number;
+  sameDayBooking: boolean;
+};
+
+export type AvailabilityTemplate = {
+  id: string;
+  name: string;
+  weeklySchedule: Record<string, DaySchedule>;
+  createdAt?: string;
+};
+
 export type AdvisorPromotion = {
   plan?: "basic" | "pro" | "premium";
   startsAt?: string;
@@ -77,7 +98,10 @@ export type AdvisorProfile = {
   audioMessageUrl?: string;
   introVideoUrl?: string;
   pricing: AdvisorPricing;
+  sessionTypes?: AdvisorSessionTypes;
   autoOnlineMode?: boolean;
+  availabilitySettings?: AvailabilitySettings;
+  availabilityTemplates?: AvailabilityTemplate[];
   weeklySchedule?: Record<string, DaySchedule>;
   dateAvailability?: Record<string, DateAvailability>;
   isOnline?: boolean;
