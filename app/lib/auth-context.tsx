@@ -65,10 +65,17 @@ const isAdvisorProfileComplete = (data?: AdvisorProfileResponse | null) => {
   const hasRealTitle =
     hasText(title) && title.toLowerCase() !== DEFAULT_PROFILE_TITLE.toLowerCase();
   const pricing = p.pricing || { chatPerMin: 0, callPerMin: 0, videoPerMin: 0 };
+  const sessionTypes = {
+    chat: p.sessionTypes?.chat !== false,
+    call: p.sessionTypes?.call !== false,
+    video: p.sessionTypes?.video !== false,
+  };
+  const enabledSessionTypeCount = Object.values(sessionTypes).filter(Boolean).length;
   const hasPricing =
-    Number(pricing.chatPerMin) > 0 &&
-    Number(pricing.callPerMin) > 0 &&
-    Number(pricing.videoPerMin) > 0;
+    enabledSessionTypeCount > 0 &&
+    (!sessionTypes.chat || Number(pricing.chatPerMin) > 0) &&
+    (!sessionTypes.call || Number(pricing.callPerMin) > 0) &&
+    (!sessionTypes.video || Number(pricing.videoPerMin) > 0);
   const hasAvailability = Object.values(p.weeklySchedule || {}).some(
     (day) => !!day?.enabled && hasText(day.from) && hasText(day.to)
   );
