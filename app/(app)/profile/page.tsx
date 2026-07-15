@@ -281,7 +281,6 @@ export default function ProfilePage() {
         expertise: p.expertise,
         styles: p.styles,
         languages: p.languages,
-        pricing: p.pricing,
         autoOnlineMode: p.autoOnlineMode,
         weeklySchedule: p.weeklySchedule,
         dateAvailability: p.dateAvailability,
@@ -304,7 +303,7 @@ export default function ProfilePage() {
     );
 
   const heading = profileHeading(tab);
-  const canSave = tab === "personal" || tab === "pricing";
+  const canSave = tab === "personal";
 
   return (
     <div className="space-y-6">
@@ -340,7 +339,7 @@ export default function ProfilePage() {
           <ExpertiseTab p={p} setP={setP} />
         </div>
       )}
-      {tab === "pricing" && p && <PricingTab p={p} setP={setP} />}
+      {tab === "pricing" && p && <PricingTab p={p} />}
       {tab === "performance" && (
         <div className="space-y-6">
           <PerformanceTab />
@@ -1009,65 +1008,54 @@ function SuggestionRow({
 
 function PricingTab({
   p,
-  setP,
 }: {
   p: AdvisorProfile;
-  setP: (next: AdvisorProfile) => void;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-8">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-5">
       <div>
         <h3 className="font-bold text-slate-900 mb-4">
-          Credit Pricing & Availabilities
+          Credit Pricing
         </h3>
         <h4 className="text-sm font-semibold text-slate-700 mb-3">
           Credits per minute
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <PricingInput
+          <ReadOnlyPricingCard
             label="Chat credits/min"
             value={p.pricing.chatPerMin}
-            onChange={(v) =>
-              setP({ ...p, pricing: { ...p.pricing, chatPerMin: v } })
-            }
           />
-          <PricingInput
+          <ReadOnlyPricingCard
             label="Audio call credits/min"
             value={p.pricing.callPerMin}
-            onChange={(v) =>
-              setP({ ...p, pricing: { ...p.pricing, callPerMin: v } })
-            }
           />
-          <PricingInput
+          <ReadOnlyPricingCard
             label="Video call credits/min"
             value={p.pricing.videoPerMin}
-            onChange={(v) =>
-              setP({ ...p, pricing: { ...p.pricing, videoPerMin: v } })
-            }
           />
         </div>
         <p className="text-xs text-slate-500 mt-3">
-          Note: You will receive 80% of earnings after platform commission
+          Pricing is managed by admin. Contact support if these rates need review.
         </p>
       </div>
+    </div>
+  );
+}
 
-      <div>
-        <h3 className="font-bold text-slate-900 mb-3">Availability</h3>
-        <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between gap-4">
-          <div>
-            <div className="font-semibold text-slate-900">Auto Online Mode</div>
-            <div className="text-xs text-slate-500 mt-0.5">
-              Automatically go online during your scheduled hours
-            </div>
-          </div>
-          <Toggle
-            checked={!!p.autoOnlineMode}
-            onChange={(v) => setP({ ...p, autoOnlineMode: v })}
-          />
-        </div>
+function ReadOnlyPricingCard({
+  label,
+  value,
+}: {
+  label: string;
+  value?: number;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="text-sm font-semibold text-slate-700">{label}</div>
+      <div className="mt-2 text-2xl font-bold text-slate-900">
+        {Number(value || 0).toLocaleString()}{" "}
+        <span className="text-sm font-semibold text-slate-500">credits/min</span>
       </div>
-
-      <DateAvailabilityCalendar p={p} setP={setP} />
     </div>
   );
 }
