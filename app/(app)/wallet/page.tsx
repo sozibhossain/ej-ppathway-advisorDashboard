@@ -566,6 +566,8 @@ td.r{font-weight:600;text-align:right}
                       : { name: "—", profilePhoto: undefined };
                   const ses = typeof t.session === "object" ? t.session : undefined;
                   const sel = selected.has(t._id);
+                  const isTip = t.type === "advisor_tip";
+                  const sessionType = ses?.type || "—";
                   return (
                     <tr
                       key={t._id}
@@ -594,19 +596,46 @@ td.r{font-weight:600;text-align:right}
                               </span>
                             </div>
                           </td>
-                          <td className="px-3 py-3 capitalize text-slate-700">
-                            {ses?.type || "—"}
+                          <td className="px-3 py-3 text-slate-700">
+                            {isTip ? (
+                              <div className="space-y-1">
+                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
+                                  Tip
+                                </span>
+                                <div className="text-xs capitalize text-slate-500">
+                                  {sessionType} session
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="capitalize">{sessionType}</span>
+                            )}
                           </td>
                           <td className="px-3 py-3 text-slate-700">
-                            {ses?.durationMinutes
-                              ? fmtMinutes(ses.durationMinutes)
-                              : "—"}
+                            <div>
+                              <div>
+                                {ses?.durationMinutes
+                                  ? fmtMinutes(ses.durationMinutes)
+                                  : "-"}
+                              </div>
+                              {ses?.sessionCode ? (
+                                <div className="text-xs font-medium text-slate-400">
+                                  {ses.sessionCode}
+                                </div>
+                              ) : null}
+                            </div>
                           </td>
                           <td className="px-3 py-3 text-slate-600">
                             {fmtDateTime(t.createdAt)}
                           </td>
-                          <td className="px-3 py-3 font-semibold text-emerald-600">
-                            +{fmtCredits(t.amount)}
+                          <td className="px-3 py-3">
+                            <div className="font-semibold text-emerald-600">
+                              +{fmtCredits(t.amount)}
+                            </div>
+                            {isTip ? (
+                              <div className="text-xs font-semibold text-emerald-700">
+                                Tip received
+                              </div>
+                            ) : null}
                           </td>
                         </>
                       ) : (
@@ -1071,3 +1100,4 @@ function Badge2({
     </span>
   );
 }
+

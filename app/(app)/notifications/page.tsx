@@ -43,6 +43,17 @@ const contractTokenOf = (n: NotificationDoc): string | undefined =>
 const chatIdOf = (n: NotificationDoc): string | undefined =>
   (n.data?.chatId || n.data?.chat) as string | undefined;
 
+const bodyFor = (n: NotificationDoc) => {
+  if (n.type === "tip_received") {
+    const amount = Number(n.data?.amount);
+    if (Number.isFinite(amount) && amount > 0) {
+      return `${amount} credits tip from your client`;
+    }
+    return n.body?.replace(/^\$(\d+(?:\.\d+)?)\s+tip/i, "$1 credits tip");
+  }
+  return n.body;
+};
+
 // The in-app destination for a notification, or null if it isn't navigable.
 const linkFor = (n: NotificationDoc): string | null => {
   const token = contractTokenOf(n);
@@ -239,6 +250,7 @@ export default function NotificationsPage() {
           {items.map((n) => {
             const isSelected = selected.has(n._id);
             const navigable = !!linkFor(n);
+            const body = bodyFor(n);
             return (
               <div
                 key={n._id}
@@ -270,9 +282,9 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-slate-900">{n.title}</div>
                     <div className="text-xs text-slate-500 mt-1">
-                      {n.body ? (
+                      {body ? (
                         <span>
-                          {n.body}
+                          {body}
                           <span className="mx-2 text-slate-300">•</span>
                         </span>
                       ) : null}
