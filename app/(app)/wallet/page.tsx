@@ -8,9 +8,12 @@ import { useAuth } from "../../lib/auth-context";
 import { fmtDate, fmtDateTime, fmtMinutes, fmtCredits, fmtCurrency } from "../../lib/format";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
-import { Input, Select } from "../../components/ui/Input";
+import { Input } from "../../components/ui/Input";
+import { Combobox } from "../../components/ui/Combobox";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal, ConfirmDialog } from "../../components/ui/Modal";
+import { HyperwalletDropInButton } from "../../components/payout/HyperwalletDropInButton";
+import { useCountries } from "../../lib/countries";
 import {
   TrendIcon,
   WalletIcon,
@@ -18,7 +21,6 @@ import {
   DownloadIcon,
   UploadIcon,
   ArrowLeftIcon,
-  PlusIcon,
 } from "../../components/Icons";
 import type {
   EarningsOverview,
@@ -858,13 +860,22 @@ function PayoutMethodModal({
   onChanged: () => void;
 }) {
   const toast = useToast();
+  const countries = useCountries();
   const [acct, setAcct] = useState(data?.account || null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [methodTab, setMethodTab] = useState<"bank" | "paypal">("bank");
-  const [routing, setRouting] = useState("");
-  const [accountNo, setAccountNo] = useState("");
-  const [purpose, setPurpose] = useState("CHECKING");
-  const [paypalEmail, setPaypalEmail] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState(data?.advisor?.dateOfBirth || "");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [city, setCity] = useState(data?.advisor?.city || "");
+  const [stateProvince, setStateProvince] = useState(data?.advisor?.state || "");
+  const [country, setCountry] = useState(data?.advisor?.country || "US");
+  const [postalCode, setPostalCode] = useState("");
+
+  useEffect(() => {
+    setDateOfBirth((value) => value || data?.advisor?.dateOfBirth || "");
+    setCity((value) => value || data?.advisor?.city || "");
+    setStateProvince((value) => value || data?.advisor?.state || "");
+    setCountry((value) => value || data?.advisor?.country || "US");
+  }, [data?.advisor]);
 
   const refresh = async () => {
     try {
@@ -891,63 +902,109 @@ function PayoutMethodModal({
     }
   };
 
-  const setup = () =>
-    run("setup", () => api.post("/wallet/advisor/payout-account/setup", {}), "Payout account ready");
-
-  const addBank = async () => {
-    if (!routing || !accountNo) {
-      toast.error("Enter routing and account number");
-      return;
-    }
-    const ok = await run(
-      "bank",
-      () =>
-        api.post("/wallet/advisor/payout-account/bank", {
-          branchId: routing,
-          bankAccountId: accountNo,
-          bankAccountPurpose: purpose,
-        }),
-      "Bank account added"
-    );
-    if (ok) {
-      setRouting("");
-      setAccountNo("");
-    }
-  };
-
-  const addPaypal = async () => {
-    if (!paypalEmail) {
-      toast.error("Enter your PayPal email");
-      return;
-    }
-    const ok = await run(
-      "paypal",
-      () => api.post("/wallet/advisor/payout-account/paypal", { email: paypalEmail }),
-      "PayPal added"
-    );
-    if (ok) setPaypalEmail("");
-  };
-
   const removeMethod = () =>
     run("remove", () => api.delete("/wallet/advisor/payout-account/method"), "Payout method removed");
 
+  const profileComplete = [dateOfBirth, addressLine1, city, stateProvince, country, postalCode].every(
+    (value) => value.trim().length > 0
+  );
+
   return (
-    <Modal open onClose={onClose} title="Payout Method" size="md">
+    <Modal open onClose={onClose} title="Set up payouts" size="lg">
       <div className="space-y-5">
         <p className="text-sm text-slate-500">
-          Add where you want to receive payouts. Your earned credits are converted to{" "}
+          Receive approved earnings in your bank account or PayPal. Your credits are converted to{" "}
           {data?.config.payoutCurrency || "USD"} at{" "}
           {fmtCurrency(data?.config.payoutCreditUsdRate ?? 1)} per credit.
         </p>
 
         {!acct?.configured ? (
           <div className="rounded-xl border border-slate-200 p-4">
-            <div className="text-sm text-slate-600 mb-3">
-              Set up your payout account to add a bank account or PayPal.
+            <div className="mb-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-[#0a7a90]">Step 1 of 2</div>
+              <div className="mt-1 font-semibold text-slate-800">Confirm your legal details</div>
+              <div className="mt-1 text-sm text-slate-500">
+                Hyperwallet needs these details once to create your payout profile. Enter them exactly as
+                they appear on your bank or PayPal account. All fields are required.
+              </div>
             </div>
-            <Button loading={busy === "setup"} onClick={setup}>
-              <PlusIcon size={16} /> Set up payout account
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <Input
+                label="Date of birth"
+                type="date"
+                value={dateOfBirth}
+                onChange={(event) => setDateOfBirth(event.target.value)}
+              />
+              <Input
+                label="Street address"
+                value={addressLine1}
+                onChange={(event) => setAddressLine1(event.target.value)}
+                placeholder="123 Main Street"
+              />
+              <Input
+                label="City"
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+                placeholder="Your city"
+              />
+              <Input
+                label="State / province"
+                value={stateProvince}
+                onChange={(event) => setStateProvince(event.target.value)}
+                placeholder="CA or Dhaka"
+              />
+              <label className="block">
+                <span className="block mb-1.5 text-sm font-medium text-slate-700">Country</span>
+                <Combobox
+                  options={countries.map((item) => ({ value: item.iso2, label: item.name }))}
+                  value={country}
+                  onChange={setCountry}
+                  placeholder="Select country"
+                  searchPlaceholder="Search countries..."
+                  emptyText="No country found."
+                />
+              </label>
+              <Input
+                label="Postal code"
+                value={postalCode}
+                onChange={(event) => setPostalCode(event.target.value)}
+                placeholder="Your postal code"
+              />
+            </div>
+            <div className="flex items-end justify-between gap-4 border-t border-slate-200 pt-4 flex-wrap">
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wide text-[#0a7a90]">Step 2 of 2</div>
+                <div className="mt-1 text-sm font-semibold text-slate-800">Choose where you get paid</div>
+                <div className="mt-1 max-w-md text-xs text-slate-500">
+                  Continue to Hyperwallet&apos;s secure form to add a bank account or PayPal. Your account
+                  details are not stored in this app.
+                </div>
+              </div>
+              <div className="text-right">
+                <HyperwalletDropInButton
+                  tokenPath="/wallet/advisor/payout-account/drop-in-token"
+                  syncPath="/wallet/advisor/payout-account/sync-method"
+                  beforeLaunch={() =>
+                    api
+                      .post("/wallet/advisor/payout-account/setup", {
+                        dateOfBirth,
+                        addressLine1,
+                        city,
+                        stateProvince,
+                        country,
+                        postalCode,
+                      })
+                      .then(() => undefined)
+                  }
+                  disabled={!profileComplete}
+                  label="Continue to secure setup"
+                  onConnected={refresh}
+                />
+                {!profileComplete && (
+                  <div className="mt-1.5 text-xs text-amber-700">Complete all fields to continue.</div>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           <>
@@ -959,8 +1016,7 @@ function PayoutMethodModal({
                   </div>
                   {acct.hasMethod ? (
                     <div className="font-medium text-slate-900">
-                      {acct.methodType === "paypal" ? "🅿️ " : "🏦 "}
-                      {acct.methodLabel || acct.methodType} · {acct.currency}
+                      {acct.methodLabel || acct.methodType} ({acct.currency})
                     </div>
                   ) : (
                     <div className="text-sm text-slate-500">No method attached yet.</div>
@@ -975,64 +1031,22 @@ function PayoutMethodModal({
             </div>
 
             <div className="rounded-xl border border-slate-200 p-4">
-              <div className="mb-3 inline-flex bg-slate-100 rounded-lg p-1">
-                <button
-                  onClick={() => setMethodTab("bank")}
-                  className={`px-3 h-8 rounded-md text-xs font-medium ${methodTab === "bank" ? "bg-white shadow-sm" : "text-slate-500"}`}
-                >
-                  Bank account
-                </button>
-                <button
-                  onClick={() => setMethodTab("paypal")}
-                  className={`px-3 h-8 rounded-md text-xs font-medium ${methodTab === "paypal" ? "bg-white shadow-sm" : "text-slate-500"}`}
-                >
-                  PayPal
-                </button>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="text-sm font-medium text-slate-800">
+                    {acct.hasMethod ? "Change payout destination" : "Choose payout destination"}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    Opens Hyperwallet&apos;s secure form. Available methods depend on your country.
+                  </div>
+                </div>
+                <HyperwalletDropInButton
+                  tokenPath="/wallet/advisor/payout-account/drop-in-token"
+                  syncPath="/wallet/advisor/payout-account/sync-method"
+                  label={acct.hasMethod ? "Change payout method" : "Choose payout method"}
+                  onConnected={refresh}
+                />
               </div>
-
-              {methodTab === "bank" ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Input
-                    label="Routing number (ABA)"
-                    value={routing}
-                    onChange={(e) => setRouting(e.target.value)}
-                    placeholder="021000021"
-                  />
-                  <Input
-                    label="Account number"
-                    value={accountNo}
-                    onChange={(e) => setAccountNo(e.target.value)}
-                    placeholder="1234567890"
-                  />
-                  <Select label="Account type" value={purpose} onChange={(e) => setPurpose(e.target.value)}>
-                    <option value="CHECKING">Checking</option>
-                    <option value="SAVINGS">Savings</option>
-                  </Select>
-                  <div className="flex items-end">
-                    <Button className="w-full" loading={busy === "bank"} onClick={addBank}>
-                      Save bank account
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Input
-                    label="PayPal email"
-                    type="email"
-                    value={paypalEmail}
-                    onChange={(e) => setPaypalEmail(e.target.value)}
-                    placeholder="you@example.com"
-                  />
-                  <div className="flex items-end">
-                    <Button className="w-full" loading={busy === "paypal"} onClick={addPaypal}>
-                      Save PayPal
-                    </Button>
-                  </div>
-                </div>
-              )}
-              <p className="mt-3 text-[11px] text-slate-400">
-                Adding a new method replaces your current active payout method.
-              </p>
             </div>
           </>
         )}

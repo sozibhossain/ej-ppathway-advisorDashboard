@@ -280,6 +280,12 @@ export type PayoutAccountInfo = {
 
 export type PayoutAccountResponse = {
   account: PayoutAccountInfo;
+  advisor?: {
+    dateOfBirth?: string;
+    country?: string;
+    state?: string;
+    city?: string;
+  };
   config: {
     payoutCreditUsdRate: number;
     payoutCurrency: string;
