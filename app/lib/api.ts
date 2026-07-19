@@ -1,7 +1,12 @@
 "use client";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL
+const DIRECT_API_BASE_URL = "https://187.77.10.158.sslip.io/api/v1";
+const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+// Browser requests must target an absolute API origin; relative proxy paths are not used.
+const API_BASE_URL = (
+  configuredApiBaseUrl?.startsWith("http") ? configuredApiBaseUrl : DIRECT_API_BASE_URL
+).replace(/\/+$/, "");
 
 export const ACCESS_TOKEN_KEY = "ej_advisor_access_token";
 export const REFRESH_TOKEN_KEY = "ej_advisor_refresh_token";
