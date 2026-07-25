@@ -203,7 +203,7 @@ export default function BookingsPage() {
               ]}
             />
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+          <div className="grid grid-cols-1 gap-2 mt-3 text-xs min-[420px]:grid-cols-3">
             <Legend
               dot="#d4a72c"
               label="Upcoming"
@@ -227,11 +227,11 @@ export default function BookingsPage() {
           <h2 className="text-lg font-bold text-slate-900">
             Bookings Calendar
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 min-[420px]:flex min-[420px]:w-auto min-[420px]:items-center">
             <button
               type="button"
               onClick={goPrev}
-              className="h-9 px-3 rounded-lg border border-slate-200 text-sm hover:bg-slate-50 inline-flex items-center gap-1"
+              className="h-9 justify-center px-3 rounded-lg border border-slate-200 text-sm hover:bg-slate-50 inline-flex items-center gap-1"
             >
               <ChevronLeftIcon size={14} />
               Previous
@@ -239,7 +239,7 @@ export default function BookingsPage() {
             <button
               type="button"
               onClick={goNext}
-              className="h-9 px-3 rounded-lg bg-[#0a7a90] text-white text-sm hover:bg-[#076377] inline-flex items-center gap-1"
+              className="h-9 justify-center px-3 rounded-lg bg-[#0a7a90] text-white text-sm hover:bg-[#076377] inline-flex items-center gap-1"
             >
               Next
               <ChevronRightIcon size={14} />
@@ -247,7 +247,7 @@ export default function BookingsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-[10px] sm:text-xs font-semibold text-slate-500 mb-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-[9px] min-[360px]:text-[10px] sm:text-xs font-semibold text-slate-500 mb-2">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
             <div key={d} className="text-center py-2">
               {d}
@@ -278,7 +278,7 @@ export default function BookingsPage() {
                   onClick={() =>
                     setSelectedDay((prev) => (prev === c.day ? null : c.day))
                   }
-                  className={`min-h-16 sm:min-h-22 w-full text-left rounded-lg sm:rounded-xl border p-1.5 sm:p-2 transition-colors ${
+                  className={`min-h-14 min-[360px]:min-h-16 sm:min-h-22 w-full text-left rounded-lg sm:rounded-xl border p-1 sm:p-2 transition-colors ${
                     has ? "cursor-pointer" : "cursor-default"
                   } ${
                     isSelected
@@ -321,7 +321,7 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
         {TABS.map((t) => {
           const active = activeTab === t.key;
           const cls: Record<string, string> = {
@@ -340,7 +340,7 @@ export default function BookingsPage() {
               key={t.key}
               type="button"
               onClick={() => setActiveTab(t.key)}
-              className={`h-12 rounded-xl border border-slate-200 font-semibold text-sm transition-colors ${cls[t.tone]}`}
+              className={`h-12 rounded-xl border border-slate-200 px-2 text-xs font-semibold transition-colors sm:text-sm ${cls[t.tone]}`}
             >
               {t.label} ({String(counts[t.key]).padStart(2, "0")})
             </button>
@@ -349,7 +349,7 @@ export default function BookingsPage() {
       </div>
 
       <div>
-        <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex flex-col items-start gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <h3 className="font-semibold text-slate-900">{listHeading}</h3>
           {selectedDay != null && (
             <button
@@ -376,7 +376,7 @@ export default function BookingsPage() {
                   key={s._id}
                   className="bg-white rounded-2xl border border-slate-200 p-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
                 >
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0 sm:gap-4">
                   <Avatar name={u.name} src={u.profilePhoto} size={56} />
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-slate-900">
@@ -396,7 +396,7 @@ export default function BookingsPage() {
                     </div>
                   </div>
                   </div>
-                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
+                  <div className="flex w-full flex-row items-center justify-between gap-2 shrink-0 sm:w-auto sm:flex-col sm:items-end">
                     <Badge
                       tone={
                         s.status === "live" || s.status === "completed"
@@ -462,14 +462,14 @@ function Legend({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2">
       <span
         className="h-3 w-3 rounded-full inline-block"
         style={{ backgroundColor: dot }}
       />
-      <div>
-        <div className="text-slate-700 font-medium">{label}</div>
-        <div className="text-slate-500 text-[10px]">{value}</div>
+      <div className="min-w-0">
+        <div className="text-slate-700 font-medium truncate">{label}</div>
+        <div className="text-slate-500 text-[10px] truncate">{value}</div>
       </div>
     </div>
   );

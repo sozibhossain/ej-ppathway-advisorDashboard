@@ -24,7 +24,7 @@ export function AuthShell({
   bottomLink,
 }: AuthShellProps) {
   return (
-    <div className="min-h-screen flex items-stretch bg-[#F4F2FB]">
+    <div className="min-h-dvh flex items-stretch bg-[#F4F2FB]">
       {/* Left side – image */}
       <div className="relative hidden lg:block lg:w-1/2">
         <Image
@@ -78,24 +78,24 @@ export function AuthShell({
       </div>
 
       {/* Right side – form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
+      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
         <div className="w-full max-w-md">
-          <div className="mb-8 flex justify-center">
+          <div className="mb-6 flex justify-center sm:mb-8">
             <Image
               src="/logo.png"
               alt="Prophetic Pathway"
               width={180}
               height={64}
               priority
-              className="h-auto w-45 object-contain"
+              className="h-auto w-40 object-contain sm:w-45"
             />
           </div>
 
-          <h1 className="text-2xl md:text-[28px] font-bold text-slate-900 text-center mb-2">
+          <h1 className="text-2xl md:text-[28px] font-bold text-slate-900 text-center mb-2 break-words">
             {title}
           </h1>
           {subtitle ? (
-            <p className="text-sm text-slate-500 text-center mb-8 max-w-sm mx-auto">
+            <p className="text-sm text-slate-500 text-center mb-6 max-w-sm mx-auto sm:mb-8">
               {subtitle}
             </p>
           ) : (

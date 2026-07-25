@@ -201,6 +201,7 @@ export default function AvailabilityPage() {
   const [profile, setProfile] = useState<AdvisorProfile | null>(null);
   const [bookings, setBookings] = useState<SessionDoc[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [onlineSaving, setOnlineSaving] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => monthStart(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const [applyModalOpen, setApplyModalOpen] = useState(false);
@@ -547,7 +548,7 @@ export default function AvailabilityPage() {
         expertise: profile.expertise,
         styles: profile.styles,
         languages: profile.languages,
-        pricing: normalized.pricing,
+        isOnline: !!normalized.isOnline,
         sessionTypes: normalized.sessionTypes,
         autoOnlineMode: normalized.autoOnlineMode,
         availabilitySettings: normalized.availabilitySettings,
@@ -561,6 +562,23 @@ export default function AvailabilityPage() {
       toast.error(err instanceof ApiError ? err.message : "Save failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const setOnlineStatus = async (next: boolean) => {
+    if (!profile) return;
+    const previous = profile.isOnline;
+    setProfile({ ...profile, isOnline: next });
+    setOnlineSaving(true);
+    try {
+      const res = await api.patch("/advisor/profile", { isOnline: next });
+      toast.success(res.message || (next ? "You are online" : "You are offline"));
+      refreshMe();
+    } catch (err) {
+      setProfile((current) => current ? { ...current, isOnline: previous } : current);
+      toast.error(err instanceof ApiError ? err.message : "Online status update failed");
+    } finally {
+      setOnlineSaving(false);
     }
   };
 
@@ -789,10 +807,19 @@ export default function AvailabilityPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex h-11 items-center gap-3 rounded-lg bg-emerald-50 px-4 text-sm font-semibold text-emerald-700">
+            <span className={`h-1.5 w-1.5 rounded-full ${profile?.isOnline ? "bg-emerald-500" : "bg-slate-400"}`} />
+            <span>{profile?.isOnline ? "Online" : "Offline"}</span>
+            <Toggle
+              checked={!!profile?.isOnline}
+              onChange={setOnlineStatus}
+              disabled={!profile || onlineSaving}
+            />
+          </div>
           <Button
             variant="secondary"
             onClick={() => setSettingsModalOpen(true)}
-            className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+            className="w-full bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 min-[420px]:w-auto"
           >
             <SettingsIcon size={15} />
             Calendar Settings
@@ -800,12 +827,12 @@ export default function AvailabilityPage() {
           <Button
             variant="secondary"
             onClick={() => setTemplatesModalOpen(true)}
-            className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+            className="w-full bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 min-[420px]:w-auto"
           >
             <BookingsIcon size={15} />
             Availability Templates
           </Button>
-          <Button onClick={openTimeOffModal}>
+          <Button onClick={openTimeOffModal} className="w-full min-[420px]:w-auto">
             <PlusIcon size={15} />
             Add Time Off
           </Button>
@@ -815,21 +842,23 @@ export default function AvailabilityPage() {
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-            <div className="flex items-center gap-2">
+            <div className="grid w-full grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 min-[520px]:flex min-[520px]:w-auto">
               <IconButton label="Previous month" onClick={() => setViewMonth(addMonths(viewMonth, -1))}>
                 <ChevronLeftIcon size={16} />
               </IconButton>
               <button
                 type="button"
-                className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-bold text-slate-800 hover:bg-slate-50"
+                className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-lg px-2 text-sm font-bold text-slate-800 hover:bg-slate-50 sm:px-3"
               >
-                {viewMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                <span className="truncate">
+                  {viewMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                </span>
               </button>
               <IconButton label="Next month" onClick={() => setViewMonth(addMonths(viewMonth, 1))}>
                 <ChevronRightIcon size={16} />
               </IconButton>
             </div>
-            <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+            <div className="grid w-full grid-cols-2 gap-1 rounded-lg border border-slate-200 bg-white p-1 min-[520px]:flex min-[520px]:w-auto min-[520px]:items-center">
               <button
                 type="button"
                 onClick={() => {
@@ -851,7 +880,7 @@ export default function AvailabilityPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50 text-center text-[11px] font-bold text-slate-500">
+          <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50 text-center text-[9px] font-bold text-slate-500 sm:text-[11px]">
             {DAYS.map((day) => (
               <div key={day} className="py-3">
                 {day}
@@ -876,7 +905,7 @@ export default function AvailabilityPage() {
                   key={key}
                   type="button"
                   onClick={() => setSelectedDate(key)}
-                  className={`min-h-28 border-b border-r border-slate-100 p-2 text-left transition ${
+                  className={`min-h-20 border-b border-r border-slate-100 p-1 text-left transition sm:min-h-28 sm:p-2 ${
                     selected
                       ? "bg-[#e6f2f6] ring-2 ring-inset ring-[#0a7a90]"
                       : unavailable
@@ -888,8 +917,8 @@ export default function AvailabilityPage() {
                             : "bg-white hover:bg-slate-50"
                   } ${inMonth ? "" : "opacity-45"}`}
                 >
-                  <span className="text-sm font-semibold text-slate-700">{cell.getDate()}</span>
-                  <div className="mt-3 min-h-8 space-y-1">
+                  <span className="text-xs font-semibold text-slate-700 sm:text-sm">{cell.getDate()}</span>
+                  <div className="mt-2 min-h-7 min-w-0 space-y-1 sm:mt-3 sm:min-h-8">
                     {unavailable ? (
                       <StatusLine tone="red" label="Unavailable" />
                     ) : booked ? (
@@ -898,7 +927,7 @@ export default function AvailabilityPage() {
                       <StatusLine tone="green" label={`${count} Slot${count === 1 ? "" : "s"}`} />
                     ) : null}
                     {overridden ? (
-                      <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                      <span className="inline-flex max-w-full truncate rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 sm:px-2 sm:text-[10px]">
                         Override
                       </span>
                     ) : null}
@@ -1009,7 +1038,7 @@ export default function AvailabilityPage() {
 
           <div className="mt-6 border-t border-slate-100 pt-4">
             <h3 className="text-sm font-bold text-slate-900">Date actions</h3>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
               <ActionButton icon={<BookingsIcon size={15} />} label="Apply to Another Date" onClick={openApplyModal} />
               <ActionButton
                 icon={fullEditableWeekHasOverrides ? <TrashIcon size={15} /> : <CopyIcon size={15} />}
@@ -1103,7 +1132,7 @@ export default function AvailabilityPage() {
 
       {timeOffModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Add time off</h2>
@@ -1208,7 +1237,7 @@ export default function AvailabilityPage() {
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="secondary" onClick={() => setTimeOffModalOpen(false)}>
                 Cancel
               </Button>
@@ -1222,7 +1251,7 @@ export default function AvailabilityPage() {
 
       {settingsModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Calendar settings</h2>
@@ -1293,7 +1322,7 @@ export default function AvailabilityPage() {
             </div>
 
             <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-3">
                 <div>
                   <div className="text-sm font-bold text-slate-900">Same-day booking</div>
                   <div className="text-xs text-slate-500">Clients can book slots for today.</div>
@@ -1303,7 +1332,7 @@ export default function AvailabilityPage() {
                   onChange={(enabled) => setAvailabilitySetting("sameDayBooking", enabled)}
                 />
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-3">
                 <div>
                   <div className="text-sm font-bold text-slate-900">Auto schedule online</div>
                   <div className="text-xs text-slate-500">Use schedule rules to manage available state.</div>
@@ -1315,7 +1344,7 @@ export default function AvailabilityPage() {
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="secondary" onClick={() => setSettingsModalOpen(false)}>
                 Done
               </Button>
@@ -1326,7 +1355,7 @@ export default function AvailabilityPage() {
 
       {templatesModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Availability templates</h2>
@@ -1397,7 +1426,7 @@ export default function AvailabilityPage() {
 
       {applyModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
@@ -1473,7 +1502,7 @@ export default function AvailabilityPage() {
               />
             </label>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="secondary" onClick={() => setApplyModalOpen(false)}>
                 Cancel
               </Button>
@@ -1574,9 +1603,9 @@ function StatusLine({ tone, label }: { tone: "green" | "blue" | "red"; label: st
   const color = tone === "green" ? "bg-emerald-500 text-emerald-700" : tone === "blue" ? "bg-blue-500 text-blue-700" : "bg-red-500 text-red-600";
   const [dot, text] = color.split(" ");
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-bold ${text}`}>
+    <span className={`inline-flex min-w-0 max-w-full items-center gap-1 text-[9px] font-bold sm:text-xs ${text}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-      {label}
+      <span className="truncate">{label}</span>
     </span>
   );
 }

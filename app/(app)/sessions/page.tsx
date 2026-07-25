@@ -306,7 +306,7 @@ export default function SessionsPage() {
               ]}
             />
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+          <div className="grid grid-cols-1 gap-2 mt-3 text-xs min-[420px]:grid-cols-3">
             <Legend
               dot="#d4a72c"
               label="Upcoming"
@@ -370,7 +370,7 @@ export default function SessionsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
         {TABS.map((t) => {
           const active = activeTab === t.key;
           const cls: Record<string, string> = {
@@ -392,7 +392,7 @@ export default function SessionsPage() {
                 setActiveTab(t.key);
                 setPage(1);
               }}
-              className={`h-12 rounded-xl border border-slate-200 font-semibold text-sm transition-colors ${cls[t.tone]}`}
+              className={`h-12 rounded-xl border border-slate-200 px-2 text-xs font-semibold transition-colors sm:text-sm ${cls[t.tone]}`}
             >
               {t.label} ({String(counts[t.key]).padStart(2, "0")})
             </button>
@@ -402,7 +402,7 @@ export default function SessionsPage() {
 
       <div ref={tableRef} className="bg-white rounded-2xl border border-slate-200 p-5">
         {selected.size > 0 ? (
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between gap-3 mb-3">
             <div className="text-sm">
               <span className="font-semibold">{selected.size}</span> Selected ·{" "}
               <button
@@ -427,8 +427,8 @@ export default function SessionsPage() {
           </div>
         ) : null}
 
-        <div className="overflow-x-auto -mx-5">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className={`w-full text-sm ${activeTab === "completed" ? "min-w-[900px]" : "min-w-[760px]"}`}>
             <thead>
               <tr className="text-xs uppercase text-slate-500 border-b border-slate-200">
                 <th className="px-5 py-3 text-left w-10">
@@ -512,7 +512,7 @@ export default function SessionsPage() {
                             src={u.profilePhoto}
                             size={28}
                           />
-                          <span className="font-medium text-slate-900">
+                          <span className="font-medium text-slate-900 whitespace-nowrap">
                             {u.name}
                           </span>
                         </div>
@@ -565,7 +565,7 @@ export default function SessionsPage() {
                         {fmtDate(s.cancelledAt || s.endedAt || s.createdAt)}
                       </td>
                       <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                           <Link
                             href={`/sessions/${s._id}`}
                             className="text-[#0a7a90] hover:underline inline-flex items-center gap-1 text-xs font-semibold"
@@ -593,7 +593,7 @@ export default function SessionsPage() {
           </table>
         </div>
 
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex flex-col items-start gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs text-slate-500">
             Showing {(page - 1) * limit + (items.length ? 1 : 0)} to{" "}
             {(page - 1) * limit + items.length} of {total} results
@@ -675,14 +675,14 @@ function Legend({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2">
       <span
         className="h-3 w-3 rounded-full inline-block"
         style={{ backgroundColor: dot }}
       />
-      <div>
-        <div className="text-slate-700 font-medium">{label}</div>
-        <div className="text-slate-500 text-[10px]">{value}</div>
+      <div className="min-w-0">
+        <div className="text-slate-700 font-medium truncate">{label}</div>
+        <div className="text-slate-500 text-[10px] truncate">{value}</div>
       </div>
     </div>
   );

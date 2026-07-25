@@ -334,9 +334,9 @@ td.r{font-weight:600;text-align:right}
         </div>
 
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col items-start gap-3 mb-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="font-semibold text-slate-900">Daily Revenue</h3>
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex w-full flex-wrap items-center gap-2 text-xs sm:w-auto sm:justify-end">
               <Badge2
                 icon={<DownloadIcon size={12} />}
                 label="Total Earnings"
@@ -389,13 +389,13 @@ td.r{font-weight:600;text-align:right}
       <div className="bg-white rounded-2xl border border-slate-200 p-5">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h2 className="font-bold text-slate-900">Transactions History</h2>
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 text-xs">
+          <div className="grid w-full grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 text-xs min-[440px]:flex min-[440px]:w-auto min-[440px]:items-center">
             {(["all", "today", "week", "month"] as Range[]).map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setRange(r)}
-                className={`px-3 h-8 rounded-md font-medium ${
+                className={`h-8 rounded-md px-2 font-medium sm:px-3 ${
                   range === r
                     ? "bg-[#0a7a90] text-white"
                     : "text-slate-600 hover:bg-white"
@@ -413,14 +413,14 @@ td.r{font-weight:600;text-align:right}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 mt-3 gap-2">
+        <div className="grid grid-cols-1 mt-3 gap-2 min-[420px]:grid-cols-2">
           <button
             type="button"
             onClick={() => {
               setTab("earnings");
               setPage(1);
             }}
-            className={`h-11 rounded-xl border font-semibold ${
+            className={`h-11 rounded-xl border px-2 text-sm font-semibold sm:text-base ${
               tab === "earnings"
                 ? "bg-[#0a7a90] text-white border-[#0a7a90]"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -434,7 +434,7 @@ td.r{font-weight:600;text-align:right}
               setTab("withdrawals");
               setPage(1);
             }}
-            className={`h-11 rounded-xl border font-semibold ${
+            className={`h-11 rounded-xl border px-2 text-sm font-semibold sm:text-base ${
               tab === "withdrawals"
                 ? "bg-[#0a7a90] text-white border-[#0a7a90]"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -471,7 +471,7 @@ td.r{font-weight:600;text-align:right}
         )}
 
         {selected.size > 0 && (
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between gap-3 mt-4">
             <div className="text-sm">
               <span className="font-semibold">{selected.size}</span> Selected ·{" "}
               <button
@@ -494,8 +494,8 @@ td.r{font-weight:600;text-align:right}
           </div>
         )}
 
-        <div className="overflow-x-auto -mx-5 mt-4">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto -mx-5 mt-4 px-5">
+          <table className={`w-full text-sm ${tab === "earnings" ? "min-w-[860px]" : "min-w-[820px]"}`}>
             <thead>
               <tr className="text-xs uppercase text-slate-500 border-b border-slate-200">
                 <th className="px-5 py-3 text-left w-10">
@@ -593,7 +593,7 @@ td.r{font-weight:600;text-align:right}
                                 src={u.profilePhoto}
                                 size={28}
                               />
-                              <span className="font-medium text-slate-900">
+                              <span className="font-medium text-slate-900 whitespace-nowrap">
                                 {u.name}
                               </span>
                             </div>
@@ -660,7 +660,7 @@ td.r{font-weight:600;text-align:right}
                         </>
                       )}
                       <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => setConfirmDelete(t)}
@@ -688,7 +688,7 @@ td.r{font-weight:600;text-align:right}
           </table>
         </div>
 
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex flex-col items-start gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs text-slate-500">
             Showing {(page - 1) * limit + (items.length ? 1 : 0)} to{" "}
             {(page - 1) * limit + items.length} of {total} results
@@ -980,7 +980,7 @@ function PayoutMethodModal({
                   details are not stored in this app.
                 </div>
               </div>
-              <div className="text-right">
+              <div className="w-full text-left sm:w-auto sm:text-right">
                 <HyperwalletDropInButton
                   tokenPath="/wallet/advisor/payout-account/drop-in-token"
                   syncPath="/wallet/advisor/payout-account/sync-method"
@@ -1107,10 +1107,10 @@ function Badge2({
   value: string;
 }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 h-7 rounded-md bg-emerald-50 text-emerald-700 text-[11px] font-semibold">
+    <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-emerald-50 px-2 h-7 text-[11px] font-semibold text-emerald-700">
       {icon}
-      <span className="text-slate-500 font-normal">{label}</span>
-      <span className="font-bold">{value}</span>
+      <span className="truncate text-slate-500 font-normal">{label}</span>
+      <span className="font-bold whitespace-nowrap">{value}</span>
     </span>
   );
 }

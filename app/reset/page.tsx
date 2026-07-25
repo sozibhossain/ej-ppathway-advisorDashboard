@@ -136,8 +136,8 @@ function ResetInner() {
 
 function ResetSuccessModal() {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-80 sm:w-90 p-8 flex flex-col items-center text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-[22.5rem] rounded-2xl bg-white p-6 text-center shadow-xl sm:p-8 flex flex-col items-center">
         <div className="relative mb-5">
           <div className="absolute -top-1 -left-2 w-3 h-3 rounded-full bg-[#0a7a90]/80" />
           <div className="absolute top-2 -right-3 w-2 h-2 rounded-full bg-[#0a7a90]/60" />

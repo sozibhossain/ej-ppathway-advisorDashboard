@@ -189,7 +189,7 @@ export default function NotificationsPage() {
 
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Notifications</h1>
           <p className="text-sm text-slate-500 mt-1">Here&apos;s your all Notifications</p>
         </div>
         <button
@@ -203,7 +203,7 @@ export default function NotificationsPage() {
 
       {/* Selection toolbar */}
       {!loading && items.length > 0 && (
-        <div className="flex items-center justify-between gap-3 px-1">
+        <div className="flex flex-col items-start gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={toggleSelectAll}
@@ -226,7 +226,7 @@ export default function NotificationsPage() {
               type="button"
               onClick={deleteSelected}
               disabled={bulkDeleting}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+              className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               <TrashIcon size={14} />
               {bulkDeleting ? "Deleting…" : `Delete selected (${selected.size})`}
@@ -280,8 +280,8 @@ export default function NotificationsPage() {
                   </button>
 
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-slate-900">{n.title}</div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="font-semibold text-slate-900 break-words">{n.title}</div>
+                    <div className="text-xs text-slate-500 mt-1 break-words">
                       {body ? (
                         <span>
                           {body}
@@ -303,7 +303,7 @@ export default function NotificationsPage() {
                       e.stopPropagation();
                       remove(n._id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 rounded-full text-red-500 hover:bg-red-50 flex items-center justify-center shrink-0"
+                    className="h-8 w-8 rounded-full text-red-500 hover:bg-red-50 flex items-center justify-center shrink-0 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <TrashIcon size={14} />
                   </button>
@@ -316,7 +316,7 @@ export default function NotificationsPage() {
 
       {/* Pagination */}
       {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}

@@ -158,12 +158,12 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Settings</h1>
           <p className="text-sm text-slate-500 mt-1">
             Manage your account settings and preferences
           </p>
         </div>
-        <Button onClick={saveAccount} loading={savingAccount}>
+        <Button onClick={saveAccount} loading={savingAccount} className="w-full sm:w-auto">
           Save Changes
         </Button>
       </div>
@@ -278,7 +278,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="flex justify-end mt-5">
-              <Button onClick={savePrefs} loading={savingPrefs}>
+              <Button onClick={savePrefs} loading={savingPrefs} className="w-full sm:w-auto">
                 Save Preferences
               </Button>
             </div>
@@ -288,10 +288,10 @@ export default function SettingsPage() {
         <div className="space-y-6">
           <Section title="Payment Method" noPad>
             <div className="rounded-xl bg-gradient-to-br from-[#0a7a90] to-[#063e4d] text-white p-5 m-5 mb-3">
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <div className="font-bold">Stripe Connect</div>
-                  <div className="text-2xl font-bold tracking-widest mt-3">
+                  <div className="text-xl font-bold tracking-widest mt-3 break-all sm:text-2xl">
                     **** **** **** {user?.stripeConnectId?.slice(-4) || "—"}
                   </div>
                   <div className="text-xs mt-2 opacity-80">
@@ -383,14 +383,14 @@ function PrefRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="bg-slate-50 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+    <div className="bg-slate-50 rounded-xl px-4 py-3 flex items-start justify-between gap-3 min-[420px]:items-center">
       <div className="min-w-0">
         <div className="font-semibold text-slate-900 text-sm">{label}</div>
         {description ? (
           <div className="text-xs text-slate-500 mt-0.5">{description}</div>
         ) : null}
       </div>
-      <Toggle checked={checked} onChange={onChange} />
+      <Toggle checked={checked} onChange={onChange} className="shrink-0" />
     </div>
   );
 }

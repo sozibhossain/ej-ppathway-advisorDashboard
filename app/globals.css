@@ -22,7 +22,13 @@ body {
 }
 
 * {
+  box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
+}
+
+html,
+body {
+  min-width: 0;
 }
 
 /* hide spinner on number inputs */

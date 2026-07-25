@@ -108,7 +108,7 @@ export default function AdvisorSupportPage() {
       </div>
 
       <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="h-16 px-5 border-b border-slate-100 flex items-center gap-3">
+        <div className="min-h-16 px-4 py-3 border-b border-slate-100 flex items-center gap-3 sm:px-5">
           <span className="h-10 w-10 rounded-full bg-[#0a7a90] text-white inline-flex items-center justify-center">
             <ChatIcon size={18} />
           </span>
@@ -118,7 +118,7 @@ export default function AdvisorSupportPage() {
           </div>
         </div>
 
-        <div ref={scrollRef} className="h-[480px] overflow-y-auto bg-slate-50 px-4 py-5 space-y-3">
+        <div ref={scrollRef} className="h-[calc(100dvh-19rem)] min-h-80 max-h-[480px] overflow-y-auto bg-slate-50 px-3 py-4 space-y-3 sm:px-4 sm:py-5">
           {messages.length === 0 ? (
             <div className="h-full flex items-center justify-center text-sm text-slate-500 text-center">
               No messages yet. Send your question to start the support conversation.
@@ -131,7 +131,7 @@ export default function AdvisorSupportPage() {
                 <div key={message._id} className={`flex gap-2 ${mine ? "justify-end" : "justify-start"}`}>
                   {!mine && <Avatar name={sender?.name || "Admin"} src={sender?.profilePhoto} size={30} />}
                   <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
+                    className={`max-w-[85%] break-words rounded-2xl px-3 py-2 text-sm leading-relaxed sm:max-w-[75%] sm:px-4 ${
                       mine
                         ? "bg-[#0a7a90] text-white rounded-br-md"
                         : "bg-white border border-slate-200 text-slate-800 rounded-bl-md"
@@ -148,7 +148,7 @@ export default function AdvisorSupportPage() {
           )}
         </div>
 
-        <form onSubmit={send} className="border-t border-slate-100 p-3 flex items-center gap-2">
+        <form onSubmit={send} className="border-t border-slate-100 p-3 flex flex-col gap-2 min-[420px]:flex-row min-[420px]:items-center">
           <input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}

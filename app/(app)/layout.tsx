@@ -17,7 +17,7 @@ export default function AppLayout({
   return (
     <div className="min-h-screen bg-[#f8fafc]">
       <Topbar />
-      <main className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 pt-24 md:ml-64">
+      <main className="min-w-0 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 pt-20 md:ml-64">
         {children}
       </main>
     </div>

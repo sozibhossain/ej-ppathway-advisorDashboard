@@ -205,7 +205,7 @@ function profileHeading(tab: TabKey) {
   if (tab === "pricing") {
     return {
       title: "Pricing",
-      description: "Manage your session rates and availability settings.",
+      description: "View the global session rates set by admin.",
     };
   }
   if (tab === "performance") {
@@ -222,7 +222,7 @@ function profileHeading(tab: TabKey) {
   }
   return {
     title: "Profile Management",
-    description: "Manage your profile, expertise and pricing",
+    description: "Manage your profile and expertise",
   };
 }
 

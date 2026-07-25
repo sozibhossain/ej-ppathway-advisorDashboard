@@ -97,7 +97,7 @@ export default function PreviewProfile() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-slate-200 px-6 py-3 flex items-center gap-3">
+      <div className="bg-white rounded-2xl border border-slate-200 px-4 py-3 flex items-center gap-3 sm:px-6">
         <button
           type="button"
           onClick={() => router.back()}
@@ -105,7 +105,7 @@ export default function PreviewProfile() {
         >
           <ArrowLeftIcon size={16} />
         </button>
-        <div className="flex-1 text-center font-semibold text-[#0a7a90]">
+        <div className="min-w-0 flex-1 truncate text-center font-semibold text-[#0a7a90]">
           Preview your Profile
         </div>
         <div className="w-9" />
@@ -114,20 +114,20 @@ export default function PreviewProfile() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-start gap-4">
+            <div className="flex flex-col gap-4 min-[420px]:flex-row min-[420px]:items-start">
               <Avatar name={u.name} src={u.profilePhoto} size={56} />
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <div className="text-xl font-bold text-slate-900">{u.name}</div>
                 <div className="text-sm text-slate-600">
                   {profile.professionalTitle}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
                   <StarIcon size={12} filled />
                   {(profile.avgRating || 0).toFixed(1)} ({reviews.length}{" "}
                   reviews)
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-left min-[420px]:text-right">
                 <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-1">
                   <AwardIcon size={24} className="text-amber-500" />
                 </div>
@@ -149,7 +149,7 @@ export default function PreviewProfile() {
             <h3 className="font-bold text-slate-900 mb-3">
               Expertise & Categories
             </h3>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Column title="Skills/Expertise" items={profile.expertise} />
               <Column title="Styles" items={profile.styles} />
               <Column title="Languages" items={profile.languages} />
@@ -158,7 +158,7 @@ export default function PreviewProfile() {
 
           <div className="bg-white rounded-2xl border border-slate-200 p-5">
             <h3 className="font-bold text-slate-900 mb-3">Availability</h3>
-            <div className="bg-slate-50 rounded-xl p-3 flex items-center justify-between">
+            <div className="bg-slate-50 rounded-xl p-3 flex items-center justify-between gap-3">
               <div>
                 <div className="font-semibold text-slate-900">
                   Auto Online Mode
@@ -183,10 +183,10 @@ export default function PreviewProfile() {
                   return (
                     <div
                       key={d}
-                      className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0"
+                      className="flex flex-col gap-1 py-1.5 border-b border-slate-100 last:border-0 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between"
                     >
                       <span className="capitalize text-slate-700">{d}</span>
-                      <span className="text-[#0a7a90] font-semibold">
+                      <span className="text-[#0a7a90] font-semibold break-words min-[420px]:text-right">
                         {scheduleLabel(sched)}
                       </span>
                     </div>
@@ -281,10 +281,10 @@ export default function PreviewProfile() {
                     key={r._id}
                     className="border border-slate-200 rounded-xl p-3"
                   >
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <Avatar name={ru.name} src={ru.profilePhoto} size={28} />
                       <div className="font-semibold text-sm">{ru.name}</div>
-                      <div className="ml-2 flex">
+                      <div className="flex min-[420px]:ml-2">
                         {[1, 2, 3, 4, 5].map((i) => (
                           <StarIcon
                             key={i}
@@ -293,7 +293,7 @@ export default function PreviewProfile() {
                           />
                         ))}
                       </div>
-                      <div className="ml-auto text-[11px] text-slate-500">
+                      <div className="w-full text-[11px] text-slate-500 min-[420px]:ml-auto min-[420px]:w-auto">
                         {fmtDate(r.createdAt)}
                       </div>
                     </div>
@@ -392,7 +392,7 @@ function Column({ title, items }: { title: string; items: string[] }) {
         {items?.map((s) => (
           <div
             key={s}
-            className="bg-sky-50 rounded-md text-sm text-slate-800 px-3 py-1.5"
+            className="bg-sky-50 rounded-md text-sm text-slate-800 px-3 py-1.5 break-words"
           >
             {s}
           </div>

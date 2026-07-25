@@ -359,14 +359,14 @@ export default function LiveSessionPage() {
           <div className="h-14 w-14 rounded-full bg-emerald-100 mx-auto flex items-center justify-center mb-3">
             <PhoneIcon size={28} className="text-emerald-600 rotate-[135deg]" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900">
+          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">
             Session Completed
           </h2>
           <p className="text-sm text-slate-500 mt-1">
             Thank you for your consultation with {u.name}
           </p>
 
-          <div className="grid grid-cols-3 gap-2 mt-5">
+          <div className="grid grid-cols-1 gap-2 mt-5 min-[380px]:grid-cols-3">
             <SummaryCell
               tone="violet"
               label="Duration"
@@ -413,7 +413,7 @@ export default function LiveSessionPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mt-5">
+          <div className="grid grid-cols-1 gap-3 mt-5 min-[380px]:grid-cols-2">
             <button
               type="button"
               onClick={() => router.push("/sessions")}
@@ -475,8 +475,8 @@ function ChatBody({
   myId: string;
 }) {
   return (
-    <div className="bg-slate-50 rounded-2xl border border-slate-200 flex flex-col h-[68vh]">
-      <div className="flex-1 overflow-y-auto p-4 thin-scroll space-y-3">
+    <div className="bg-slate-50 rounded-2xl border border-slate-200 flex flex-col h-[calc(100dvh-12rem)] min-h-80 max-h-[68vh] sm:min-h-96">
+      <div className="flex-1 overflow-y-auto p-3 thin-scroll space-y-3 sm:p-4">
         {messages.length === 0 ? (
           <div className="text-center text-sm text-slate-500 py-10">
             Conversation will appear here.
@@ -497,7 +497,7 @@ function ChatBody({
                       "U"}{" "}
                   </div>
                 ) : null}
-                <div className="max-w-[70%]">
+                <div className="max-w-[85%] break-words sm:max-w-[70%]">
                   <div
                     className={`rounded-2xl px-4 py-2 text-sm ${
                       mine ? "bg-[#0a7a90] text-white" : "bg-white text-slate-900 border border-slate-200"
@@ -588,7 +588,7 @@ function VideoBody({
   const lk = useLiveKitSession({ sessionId, mode: "video", enabled: live });
 
   return (
-    <div className="bg-slate-900 rounded-2xl border border-slate-200 h-[68vh] relative overflow-hidden">
+    <div className="bg-slate-900 rounded-2xl border border-slate-200 h-[calc(100dvh-12rem)] min-h-80 max-h-[68vh] sm:min-h-96 relative overflow-hidden">
       {/* Remote participant video */}
       <video
         ref={lk.setRemoteVideoEl}
@@ -613,7 +613,7 @@ function VideoBody({
       )}
 
       {/* Local camera preview */}
-      <div className="absolute top-4 right-4 w-40 h-28 rounded-lg bg-black border-2 border-white overflow-hidden flex items-center justify-center text-white text-xs">
+      <div className="absolute top-3 right-3 h-20 w-28 rounded-lg bg-black border-2 border-white overflow-hidden flex items-center justify-center text-white text-xs sm:top-4 sm:right-4 sm:h-28 sm:w-40">
         <video
           ref={lk.setLocalVideoEl}
           autoPlay
@@ -634,7 +634,7 @@ function VideoBody({
         {statusLabel(lk.status)}
       </div>
       {lk.error && (
-        <div className="absolute top-12 left-4 text-xs text-red-300 max-w-[60%]">
+        <div className="absolute top-12 left-4 max-w-[80%] text-xs text-red-300 sm:max-w-[60%]">
           {lk.error}
         </div>
       )}
