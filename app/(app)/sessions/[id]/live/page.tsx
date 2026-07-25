@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../../../../lib/api";
 import { useToast } from "../../../../lib/toast";
-import { fmtDuration, fmtCredits } from "../../../../lib/format";
+import { fmtDuration } from "../../../../lib/format";
 import { Avatar } from "../../../../components/ui/Avatar";
 import { Button } from "../../../../components/ui/Button";
 import { CardSkeleton } from "../../../../components/ui/Skeleton";
@@ -53,7 +53,6 @@ export default function LiveSessionPage() {
   const [session, setSession] = useState<SessionDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [elapsed, setElapsed] = useState(0);
-  const [earned, setEarned] = useState(0);
   const [ending, setEnding] = useState(false);
 
   // chat state
@@ -67,7 +66,6 @@ export default function LiveSessionPage() {
   const [summaryNotes, setSummaryNotes] = useState("");
   const [summaryRating, setSummaryRating] = useState(0);
   const [summaryDuration, setSummaryDuration] = useState(0);
-  const [summaryEarned, setSummaryEarned] = useState(0);
 
   const myId = useRef<string>("");
 
@@ -140,7 +138,6 @@ export default function LiveSessionPage() {
         if (cancel) return;
         if (r.data?.session) {
           setSession(r.data.session);
-          setEarned(r.data.session.advisorPayout || r.data.session.chargedAmount || 0);
         }
         if (r.data?.autoEnded) {
           handleAutoEnd(r.data.session);
@@ -182,7 +179,6 @@ export default function LiveSessionPage() {
 
   const handleAutoEnd = (s: SessionDoc) => {
     setSummaryDuration(elapsed);
-    setSummaryEarned(s.advisorPayout || s.chargedAmount || 0);
     setShowSummary(true);
   };
 
@@ -194,9 +190,6 @@ export default function LiveSessionPage() {
       if (r.data) {
         setSession(r.data);
         setSummaryDuration(elapsed);
-        setSummaryEarned(
-          r.data.advisorPayout || r.data.chargedAmount || earned
-        );
         setShowSummary(true);
       }
     } catch (e) {
@@ -274,18 +267,6 @@ export default function LiveSessionPage() {
           </div>
           <div className="text-[11px] text-slate-500">Session Time</div>
         </div>
-        <div className="text-center">
-          <div className="text-lg font-bold">
-            {fmtCredits(session.ratePerMin)}/min
-          </div>
-          <div className="text-[11px] text-slate-500">Rate</div>
-        </div>
-        <div className="text-center">
-          <div className="text-lg font-bold text-emerald-600">
-            {fmtCredits(earned || session.chargedAmount || 0)}
-          </div>
-          <div className="text-[11px] text-slate-500">Current Earnings</div>
-        </div>
       </div>
       <div className="flex items-center gap-2">
         <Button variant="danger" onClick={onEnd} loading={ending}>
@@ -341,7 +322,6 @@ export default function LiveSessionPage() {
         <AudioBody
           u={u}
           elapsed={elapsed}
-          earned={earned}
           onEnd={onEnd}
           ending={ending}
           sessionId={session._id}
@@ -366,16 +346,11 @@ export default function LiveSessionPage() {
             Thank you for your consultation with {u.name}
           </p>
 
-          <div className="grid grid-cols-1 gap-2 mt-5 min-[380px]:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 mt-5 min-[380px]:grid-cols-2">
             <SummaryCell
               tone="violet"
               label="Duration"
               value={fmtDuration(summaryDuration)}
-            />
-            <SummaryCell
-              tone="emerald"
-              label="Earned"
-              value={fmtCredits(summaryEarned)}
             />
             <SummaryCell tone="amber" label="Client" value={u.name.split(" ")[0]} />
           </div>
@@ -690,7 +665,6 @@ function VideoBody({
 function AudioBody({
   u,
   elapsed,
-  earned,
   onEnd,
   ending,
   sessionId,
@@ -698,7 +672,6 @@ function AudioBody({
 }: {
   u: { name: string; profilePhoto?: string };
   elapsed: number;
-  earned: number;
   onEnd: () => void;
   ending: boolean;
   sessionId: string;
@@ -728,9 +701,6 @@ function AudioBody({
       </div>
       <div className="text-3xl font-bold text-[#0a7a90] mt-2 tabular-nums">
         {fmtDuration(elapsed)}
-      </div>
-      <div className="text-xs text-slate-500 mt-1">
-        ${earned.toFixed(2)} so far
       </div>
       <div className="text-xs text-slate-400 mt-1">
         {lk.remotePresent ? `${u.name} is connected` : "Waiting for the other person…"}

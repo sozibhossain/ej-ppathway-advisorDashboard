@@ -45,11 +45,7 @@ const chatIdOf = (n: NotificationDoc): string | undefined =>
 
 const bodyFor = (n: NotificationDoc) => {
   if (n.type === "tip_received") {
-    const amount = Number(n.data?.amount);
-    if (Number.isFinite(amount) && amount > 0) {
-      return `${amount} credits tip from your client`;
-    }
-    return n.body?.replace(/^\$(\d+(?:\.\d+)?)\s+tip/i, "$1 credits tip");
+    return "Tip received from your client";
   }
   return n.body;
 };

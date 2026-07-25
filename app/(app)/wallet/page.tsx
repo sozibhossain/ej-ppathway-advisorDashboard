@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api, ApiError } from "../../lib/api";
 import { useToast } from "../../lib/toast";
-import { useAuth } from "../../lib/auth-context";
-import { fmtDate, fmtDateTime, fmtMinutes, fmtCredits, fmtCurrency } from "../../lib/format";
+import { fmtDateTime, fmtMinutes } from "../../lib/format";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -14,695 +13,251 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal, ConfirmDialog } from "../../components/ui/Modal";
 import { HyperwalletDropInButton } from "../../components/payout/HyperwalletDropInButton";
 import { useCountries } from "../../lib/countries";
-import {
-  TrendIcon,
-  WalletIcon,
-  TrashIcon,
-  DownloadIcon,
-  UploadIcon,
-  ArrowLeftIcon,
-} from "../../components/Icons";
-import type {
-  EarningsOverview,
-  TransactionDoc,
-  PayoutAccountResponse,
-} from "../../lib/types";
+import { WalletIcon, TrashIcon } from "../../components/Icons";
+import type { PayoutAccountResponse, TransactionDoc } from "../../lib/types";
 
 type Range = "all" | "today" | "week" | "month";
+type Tab = "services" | "payouts";
+
+const serviceLabel = (type?: string) => {
+  if (type === "call") return "Audio call";
+  if (type === "video") return "Video call";
+  if (type === "chat") return "Text chat";
+  return "Service";
+};
 
 export default function WalletPage() {
   const toast = useToast();
-  const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [overview, setOverview] = useState<EarningsOverview | null>(null);
-  const [loadingOverview, setLoadingOverview] = useState(true);
-
-  const [tab, setTab] = useState<"earnings" | "withdrawals">(
-    searchParams.get("tab") === "withdrawals" ? "withdrawals" : "earnings",
+  const [tab, setTab] = useState<Tab>(
+    searchParams.get("tab") === "withdrawals" ? "payouts" : "services",
   );
   const [range, setRange] = useState<Range>("all");
   const [items, setItems] = useState<TransactionDoc[]>([]);
-  const [loadingTab, setLoadingTab] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 5;
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [confirmDelete, setConfirmDelete] = useState<TransactionDoc | null>(
-    null
-  );
-  const [delLoading, setDelLoading] = useState(false);
-
-  const [showWithdraw, setShowWithdraw] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [withdrawing, setWithdrawing] = useState(false);
-
-  const [confirmBulk, setConfirmBulk] = useState(false);
-  const [bulkLoading, setBulkLoading] = useState(false);
-
+  const [confirmDelete, setConfirmDelete] = useState<TransactionDoc | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [payout, setPayout] = useState<PayoutAccountResponse | null>(null);
   const [showPayoutMethod, setShowPayoutMethod] = useState(false);
+  const limit = 8;
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total]);
+  const method = payout?.account;
 
   const loadPayout = async () => {
     try {
       const r = await api.get<PayoutAccountResponse>("/wallet/advisor/payout-account");
       setPayout(r.data || null);
     } catch {
-      // ignore — payout config is best-effort
+      // Payout setup is best-effort for this page.
     }
   };
 
-  const loadOverview = async () => {
-    setLoadingOverview(true);
+  const loadHistory = async () => {
+    setLoading(true);
     try {
-      const r = await api.get<EarningsOverview>("/wallet/advisor/overview");
-      setOverview(r.data || null);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingOverview(false);
-    }
-  };
-
-  const loadTab = async () => {
-    setLoadingTab(true);
-    try {
-      const path =
-        tab === "earnings"
-          ? "/wallet/advisor/earnings"
-          : "/wallet/advisor/withdrawals";
-      const q: Record<string, string | number> = { page, limit };
-      if (tab === "earnings" && range !== "all") q.range = range;
-      const r = await api.get<TransactionDoc[]>(path, q);
+      const path = tab === "services" ? "/wallet/advisor/earnings" : "/wallet/advisor/withdrawals";
+      const query: Record<string, string | number> = { page, limit };
+      if (tab === "services" && range !== "all") query.range = range;
+      const r = await api.get<TransactionDoc[]>(path, query);
       setItems(r.data || []);
       setTotal(r.meta?.total || 0);
-      setSelected(new Set());
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to load history");
     } finally {
-      setLoadingTab(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadOverview();
     loadPayout();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const queryTab = searchParams.get("tab");
-    setTab(queryTab === "withdrawals" ? "withdrawals" : "earnings");
+    setTab(queryTab === "withdrawals" ? "payouts" : "services");
   }, [searchParams]);
 
   useEffect(() => {
-    loadTab();
+    loadHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, range, page]);
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(total / limit)),
-    [total]
-  );
-
-  const onWithdraw = async () => {
-    const v = Number(amount);
-    if (!v || v <= 0) {
-      toast.error("Enter a valid amount");
-      return;
-    }
-    if (!payout?.account.hasMethod) {
-      toast.error("Add a payout method first");
-      setShowWithdraw(false);
-      setShowPayoutMethod(true);
-      return;
-    }
-    setWithdrawing(true);
-    try {
-      await api.post("/wallet/advisor/withdraw", { credits: v });
-      toast.success("Withdrawal requested — payouts processed in 2-5 days");
-      setShowWithdraw(false);
-      setAmount("");
-      loadOverview();
-      if (tab === "withdrawals") loadTab();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Withdraw failed");
-    } finally {
-      setWithdrawing(false);
-    }
-  };
-
-  const onDelete = async () => {
+  const deleteRecord = async () => {
     if (!confirmDelete) return;
-    setDelLoading(true);
+    setDeleteLoading(true);
     try {
-      const path =
-        tab === "earnings"
-          ? `/wallet/advisor/earnings/${confirmDelete._id}`
-          : `/wallet/advisor/withdrawals/${confirmDelete._id}`;
-      await api.delete(path);
+      const base = tab === "services" ? "/wallet/advisor/earnings" : "/wallet/advisor/withdrawals";
+      await api.delete(`${base}/${confirmDelete._id}`);
       toast.success("Removed from history");
       setConfirmDelete(null);
-      loadTab();
+      loadHistory();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Delete failed");
     } finally {
-      setDelLoading(false);
+      setDeleteLoading(false);
     }
   };
-
-  const onBulkDelete = async () => {
-    if (selected.size === 0) return;
-    const ids = Array.from(selected);
-    const base =
-      tab === "earnings"
-        ? "/wallet/advisor/earnings"
-        : "/wallet/advisor/withdrawals";
-    setBulkLoading(true);
-    try {
-      const results = await Promise.allSettled(
-        ids.map((id) => api.delete(`${base}/${id}`))
-      );
-      const failed = results.filter((r) => r.status === "rejected").length;
-      const ok = results.length - failed;
-      if (ok > 0) toast.success(`${ok} removed from history`);
-      if (failed > 0) toast.error(`${failed} could not be removed`);
-      setConfirmBulk(false);
-      setSelected(new Set());
-      loadTab();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Bulk delete failed");
-    } finally {
-      setBulkLoading(false);
-    }
-  };
-
-  const downloadInvoice = (t: TransactionDoc) => {
-    const advisorName = user?.name || "Advisor";
-    const id = `INV-${t._id.slice(-6).toUpperCase()}`;
-    const date = fmtDateTime(t.createdAt);
-    const amount = fmtCredits(t.amount);
-    const methodLabel = t.withdrawalMethod
-      ? t.withdrawalMethod.replace(/_/g, " ").replace("hyperwallet", "Hyperwallet")
-      : "Hyperwallet";
-    const html = `<!doctype html>
-<html><head><meta charset="utf-8"><title>${id}</title>
-<style>
-body{font-family:Outfit,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#0f172a;padding:32px;max-width:720px;margin:auto}
-h1{margin:0 0 4px 0;font-size:24px}
-.muted{color:#64748b;font-size:12px}
-.box{border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-top:24px}
-table{width:100%;border-collapse:collapse;margin-top:16px}
-td{padding:8px 0;font-size:14px}
-td.l{color:#64748b;width:40%}
-td.r{font-weight:600;text-align:right}
-.total{border-top:1px solid #e2e8f0;font-size:16px;color:#dc2626}
-</style></head>
-<body>
-<h1>Withdrawal Invoice</h1>
-<div class="muted">${id} &middot; ${date}</div>
-<div class="box">
-  <table>
-    <tr><td class="l">Advisor</td><td class="r">${advisorName}</td></tr>
-    <tr><td class="l">Transaction ID</td><td class="r">${t._id}</td></tr>
-    <tr><td class="l">Type</td><td class="r">Withdrawal</td></tr>
-    <tr><td class="l">Method</td><td class="r">${methodLabel}</td></tr>
-    <tr><td class="l">Status</td><td class="r">${t.withdrawalStatus || t.status || "—"}</td></tr>
-    <tr><td class="l">Date</td><td class="r">${date}</td></tr>
-    <tr class="total"><td class="l">Amount</td><td class="r">- ${amount}</td></tr>
-  </table>
-</div>
-<div class="muted" style="margin-top:24px">Prophetic Pathway &middot; Generated ${new Date().toLocaleString()}</div>
-</body></html>`;
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${id}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelected((s) => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const curve = (overview?.revenueCurve || []).reduce(
-    (acc, c) => {
-      acc[c._id] = c.total;
-      return acc;
-    },
-    {} as Record<number, number>
-  );
-  const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const values = [2, 3, 4, 5, 6, 7, 1].map((d) => curve[d] || 0);
-  const max = Math.max(...values, 1);
-  const peakIdx = values.indexOf(max);
-
-  const balance = overview?.wallet?.earningsBalance || 0;
-  const rate = payout?.config.payoutCreditUsdRate ?? 1;
-  const payoutCurrency = payout?.config.payoutCurrency || "USD";
-  const minCredits = payout?.config.minPayoutCredits ?? 50;
-  const balanceUsd = balance * rate;
-  const amountUsd = (Number(amount) || 0) * rate;
-  const method = payout?.account;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Earnings Overview
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Track and manage your professional income.
+          <h1 className="text-2xl font-bold text-slate-900">Payouts</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage your payout destination and review your service history.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="lg" onClick={() => setShowPayoutMethod(true)}>
-            <WalletIcon size={16} />
-            {payout?.account.hasMethod ? "Payout Method" : "Add Payout Method"}
-          </Button>
-          <Button
-            onClick={() => setShowWithdraw(true)}
-            disabled={balance < minCredits}
-            size="lg"
-          >
-            <UploadIcon size={16} />
-            Withdraw Funds
-          </Button>
-        </div>
+        <Button variant="outline" size="lg" onClick={() => setShowPayoutMethod(true)}>
+          <WalletIcon size={16} />
+          {method?.hasMethod ? "Payout Method" : "Add Payout Method"}
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-sky-50 rounded-2xl border border-sky-100 p-5">
-          <div className="flex items-start justify-between">
-            <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-[#0a7a90]">
-              <WalletIcon size={22} />
-            </div>
-            <div className="h-10 w-10 rounded-full bg-[#0a7a90] text-white flex items-center justify-center">
-              $
-            </div>
-          </div>
-          <div className="text-xs text-slate-600 mt-3">Available Balance</div>
-          <div className="text-3xl font-bold text-slate-900 mt-1">
-            {fmtCredits(balance)}
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            ≈ {fmtCurrency(balanceUsd)} {payoutCurrency} · Minimum {minCredits} credits
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 mt-4">
-            <div className="bg-white rounded-xl p-3">
-              <div className="text-xs text-slate-600">Today's Earnings</div>
-              <div className="text-emerald-600 font-bold text-xl mt-1">
-                +{fmtCredits(overview?.todayEarnings || 0)}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 lg:col-span-1">
+          <div className="mb-2 text-sm font-semibold text-slate-900">Payout destination</div>
+          {method?.hasMethod ? (
+            <div className="rounded-xl bg-sky-50 p-4">
+              <div className="font-semibold text-slate-900">
+                {method.methodLabel || (method.methodType === "paypal" ? "PayPal" : "Bank account")}
               </div>
-            </div>
-            <div className="bg-white rounded-xl p-3">
-              <div className="text-xs text-slate-600">Today's Withdrawals</div>
-              <div className="text-red-600 font-bold text-xl mt-1">
-                -{fmtCredits(overview?.todayWithdrawals || 0)}
+              <div className="mt-1 text-sm text-slate-500">
+                {method.verified ? "Connected" : "Pending verification"}
+                {method.currency ? ` · ${method.currency}` : ""}
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex flex-col items-start gap-3 mb-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="font-semibold text-slate-900">Daily Revenue</h3>
-            <div className="flex w-full flex-wrap items-center gap-2 text-xs sm:w-auto sm:justify-end">
-              <Badge2
-                icon={<DownloadIcon size={12} />}
-                label="Total Earnings"
-                value={fmtCredits(overview?.grossEarnings || 0)}
-              />
-              <Badge2
-                icon={<UploadIcon size={12} />}
-                label="Total Withdraw"
-                value={fmtCredits(overview?.totalWithdrawn || 0)}
-              />
-              <span className="px-3 h-7 inline-flex items-center rounded-lg bg-slate-100 text-slate-700 font-medium">
-                Weekly
-              </span>
-            </div>
-          </div>
-
-          {loadingOverview ? (
-            <div className="h-56 flex items-end gap-3 px-3">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <Skeleton
-                  key={i}
-                  className="flex-1 rounded-t-lg"
-                  style={{ height: `${30 + ((i * 13) % 60)}%` }}
-                />
-              ))}
             </div>
           ) : (
-            <div className="h-56 flex items-end gap-3 px-3">
-              {values.map((v, i) => {
-                const h = (v / max) * 100;
-                const isPeak = i === peakIdx;
-                return (
-                  <div
-                    key={i}
-                    className="flex-1 flex flex-col items-center gap-2"
-                  >
-                    <div
-                      className={`w-full rounded-t-lg ${isPeak ? "bg-[#0a7a90]" : "bg-slate-100"}`}
-                      style={{ height: `${Math.max(8, h)}%`, minHeight: 16 }}
-                    />
-                    <div className="text-[10px] text-slate-500">{labels[i]}</div>
-                  </div>
-                );
-              })}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              Add a bank account or PayPal destination so admins can send approved payouts.
             </div>
           )}
         </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 lg:col-span-2">
+          <div className="mb-2 text-sm font-semibold text-slate-900">Payout process</div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <ProcessStep title="1. Complete services" text="Your completed sessions are recorded in service history." />
+            <ProcessStep title="2. Admin reviews" text="Admins review payout details and approve payable work." />
+            <ProcessStep title="3. Receive payout" text="Approved payouts are sent to your connected destination." />
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="font-bold text-slate-900">Transactions History</h2>
-          <div className="grid w-full grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 text-xs min-[440px]:flex min-[440px]:w-auto min-[440px]:items-center">
-            {(["all", "today", "week", "month"] as Range[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRange(r)}
-                className={`h-8 rounded-md px-2 font-medium sm:px-3 ${
-                  range === r
-                    ? "bg-[#0a7a90] text-white"
-                    : "text-slate-600 hover:bg-white"
-                }`}
-              >
-                {r === "all"
-                  ? "All Time"
-                  : r === "today"
-                    ? "Today"
-                    : r === "week"
-                      ? "This Week"
-                      : "This Month"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 mt-3 gap-2 min-[420px]:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => {
-              setTab("earnings");
-              setPage(1);
-            }}
-            className={`h-11 rounded-xl border px-2 text-sm font-semibold sm:text-base ${
-              tab === "earnings"
-                ? "bg-[#0a7a90] text-white border-[#0a7a90]"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            Earnings History
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setTab("withdrawals");
-              setPage(1);
-            }}
-            className={`h-11 rounded-xl border px-2 text-sm font-semibold sm:text-base ${
-              tab === "withdrawals"
-                ? "bg-[#0a7a90] text-white border-[#0a7a90]"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            Withdrawals History
-          </button>
-        </div>
-
-        {tab === "earnings" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-            <SummaryStat
-              tone="sky"
-              icon={<DownloadIcon size={16} />}
-              label="Gross Earnings"
-              value={fmtCredits(overview?.grossEarnings || 0)}
-              chip="+ 20%"
-            />
-            <SummaryStat
-              tone="rose"
-              icon={<TrendIcon size={16} />}
-              label="Platform fee"
-              value={fmtCredits(overview?.platformFee || 0)}
-              chip="-20% Commission"
-            />
-            <SummaryStat
-              tone="emerald"
-              icon={<TrendIcon size={16} />}
-              label="Net Earnings"
-              value={fmtCredits(overview?.netEarnings || 0)}
-              chip="+ 14%"
-            />
-          </div>
-        )}
-
-        {selected.size > 0 && (
-          <div className="flex items-center justify-between gap-3 mt-4">
-            <div className="text-sm">
-              <span className="font-semibold">{selected.size}</span> Selected ·{" "}
-              <button
-                type="button"
-                onClick={() => setSelected(new Set())}
-                className="text-[#0a7a90] hover:underline"
-              >
-                Deselect all
-              </button>
-            </div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="grid w-full grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 text-sm min-[460px]:w-auto">
             <button
               type="button"
-              onClick={() => setConfirmBulk(true)}
-              aria-label="Remove selected from history"
-              title="Remove selected from history"
-              className="h-9 w-9 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100"
+              onClick={() => {
+                setTab("services");
+                setPage(1);
+              }}
+              className={`h-9 rounded-md px-3 font-semibold ${
+                tab === "services" ? "bg-[#0a7a90] text-white" : "text-slate-600 hover:bg-white"
+              }`}
             >
-              <TrashIcon size={16} />
+              Service History
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTab("payouts");
+                setPage(1);
+              }}
+              className={`h-9 rounded-md px-3 font-semibold ${
+                tab === "payouts" ? "bg-[#0a7a90] text-white" : "text-slate-600 hover:bg-white"
+              }`}
+            >
+              Payout History
             </button>
           </div>
-        )}
 
-        <div className="overflow-x-auto -mx-5 mt-4 px-5">
-          <table className={`w-full text-sm ${tab === "earnings" ? "min-w-[860px]" : "min-w-[820px]"}`}>
+          {tab === "services" ? (
+            <div className="grid w-full grid-cols-4 gap-1 rounded-lg bg-slate-100 p-1 text-xs min-[520px]:w-auto">
+              {(["all", "today", "week", "month"] as Range[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => {
+                    setRange(r);
+                    setPage(1);
+                  }}
+                  className={`h-8 rounded-md px-2 font-medium ${
+                    range === r ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
+                  }`}
+                >
+                  {r === "all" ? "All" : r === "today" ? "Today" : r === "week" ? "Week" : "Month"}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-sm">
             <thead>
-              <tr className="text-xs uppercase text-slate-500 border-b border-slate-200">
-                <th className="px-5 py-3 text-left w-10">
-                  <input
-                    type="checkbox"
-                    checked={selected.size === items.length && items.length > 0}
-                    onChange={(e) => {
-                      if (e.target.checked)
-                        setSelected(new Set(items.map((i) => i._id)));
-                      else setSelected(new Set());
-                    }}
-                  />
-                </th>
-                {tab === "earnings" ? (
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+                {tab === "services" ? (
                   <>
-                    <th className="px-3 py-3 text-left font-semibold">User</th>
-                    <th className="px-3 py-3 text-left font-semibold">Type</th>
-                    <th className="px-3 py-3 text-left font-semibold">
-                      Duration
-                    </th>
-                    <th className="px-3 py-3 text-left font-semibold">
-                      Date & Time
-                    </th>
-                    <th className="px-3 py-3 text-left font-semibold">
-                      Earned
-                    </th>
+                    <th className="px-4 py-3 font-semibold">Client</th>
+                    <th className="px-4 py-3 font-semibold">Service</th>
+                    <th className="px-4 py-3 font-semibold">Duration</th>
+                    <th className="px-4 py-3 font-semibold">Date & Time</th>
                   </>
                 ) : (
                   <>
-                    <th className="px-3 py-3 text-left font-semibold">Type</th>
-                    <th className="px-3 py-3 text-left font-semibold">
-                      Date & Time
-                    </th>
-                    <th className="px-3 py-3 text-left font-semibold">
-                      Earned
-                    </th>
-                    <th className="px-3 py-3 text-left font-semibold">
-                      Withdrawal method
-                    </th>
+                    <th className="px-4 py-3 font-semibold">Payout</th>
+                    <th className="px-4 py-3 font-semibold">Method</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Date & Time</th>
                   </>
                 )}
-                <th className="px-5 py-3 text-right font-semibold">Action</th>
+                <th className="px-4 py-3 text-right font-semibold">Action</th>
               </tr>
             </thead>
             <tbody>
-              {loadingTab ? (
-                Array.from({ length: 5 }).map((_, r) => (
-                  <tr key={r} className="border-b border-slate-50 last:border-0">
-                    {Array.from({ length: 7 }).map((_, c) => (
-                      <td key={c} className="px-5 py-4">
-                        <Skeleton className="h-3 w-full max-w-25" />
+              {loading ? (
+                Array.from({ length: 5 }).map((_, row) => (
+                  <tr key={row} className="border-b border-slate-100">
+                    {Array.from({ length: 5 }).map((__, col) => (
+                      <td key={col} className="px-4 py-4">
+                        <Skeleton className="h-3 w-full max-w-32" />
                       </td>
                     ))}
                   </tr>
                 ))
               ) : items.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="text-center py-10 text-slate-500 text-sm"
-                  >
+                  <td colSpan={5} className="py-10 text-center text-slate-500">
                     No records yet
                   </td>
                 </tr>
               ) : (
-                items.map((t) => {
-                  const u =
-                    typeof t.user === "object"
-                      ? t.user
-                      : { name: "—", profilePhoto: undefined };
-                  const ses = typeof t.session === "object" ? t.session : undefined;
-                  const sel = selected.has(t._id);
-                  const isTip = t.type === "advisor_tip";
-                  const sessionType = ses?.type || "—";
-                  return (
-                    <tr
-                      key={t._id}
-                      className={`border-b border-slate-100 ${
-                        sel ? "bg-amber-50" : ""
-                      }`}
-                    >
-                      <td className="px-5 py-3">
-                        <input
-                          type="checkbox"
-                          checked={sel}
-                          onChange={() => toggleSelect(t._id)}
-                        />
-                      </td>
-                      {tab === "earnings" ? (
-                        <>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-2">
-                              <Avatar
-                                name={u.name}
-                                src={u.profilePhoto}
-                                size={28}
-                              />
-                              <span className="font-medium text-slate-900 whitespace-nowrap">
-                                {u.name}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-slate-700">
-                            {isTip ? (
-                              <div className="space-y-1">
-                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
-                                  Tip
-                                </span>
-                                <div className="text-xs capitalize text-slate-500">
-                                  {sessionType} session
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="capitalize">{sessionType}</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 text-slate-700">
-                            <div>
-                              <div>
-                                {ses?.durationMinutes
-                                  ? fmtMinutes(ses.durationMinutes)
-                                  : "-"}
-                              </div>
-                              {ses?.sessionCode ? (
-                                <div className="text-xs font-medium text-slate-400">
-                                  {ses.sessionCode}
-                                </div>
-                              ) : null}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-slate-600">
-                            {fmtDateTime(t.createdAt)}
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="font-semibold text-emerald-600">
-                              +{fmtCredits(t.amount)}
-                            </div>
-                            {isTip ? (
-                              <div className="text-xs font-semibold text-emerald-700">
-                                Tip received
-                              </div>
-                            ) : null}
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-3 py-3 text-slate-700">
-                            Withdrawal
-                          </td>
-                          <td className="px-3 py-3 text-slate-600">
-                            {fmtDateTime(t.createdAt)}
-                          </td>
-                          <td className="px-3 py-3 font-semibold text-red-600">
-                            -{fmtCredits(t.amount)}
-                          </td>
-                          <td className="px-3 py-3 text-slate-700 capitalize">
-                            {(t.withdrawalMethod || method?.methodLabel || "—")
-                              .replace(/_/g, " ")
-                              .replace("hyperwallet", "")
-                              .trim() || "—"}
-                          </td>
-                        </>
-                      )}
-                      <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDelete(t)}
-                            className="h-8 w-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100"
-                          >
-                            <TrashIcon size={14} />
-                          </button>
-                          {tab === "earnings" ? null : (
-                            <button
-                              type="button"
-                              onClick={() => downloadInvoice(t)}
-                              className="text-[#0a7a90] hover:underline inline-flex items-center gap-1 text-xs font-semibold"
-                            >
-                              Download invoice
-                              <DownloadIcon size={12} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                items.map((item) =>
+                  tab === "services" ? (
+                    <ServiceRow key={item._id} item={item} onDelete={() => setConfirmDelete(item)} />
+                  ) : (
+                    <PayoutRow key={item._id} item={item} onDelete={() => setConfirmDelete(item)} />
+                  ),
+                )
               )}
             </tbody>
           </table>
         </div>
 
-        <div className="flex flex-col items-start gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="text-xs text-slate-500">
-            Showing {(page - 1) * limit + (items.length ? 1 : 0)} to{" "}
-            {(page - 1) * limit + items.length} of {total} results
+            Showing {(page - 1) * limit + (items.length ? 1 : 0)} to {(page - 1) * limit + items.length} of {total}
           </div>
           <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-            >
-              ‹
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+              Prev
             </Button>
-            <span className="px-3 text-sm bg-[#0a7a90] text-white rounded-lg h-8 inline-flex items-center font-semibold">
+            <span className="inline-flex h-8 items-center rounded-lg bg-[#0a7a90] px-3 text-sm font-semibold text-white">
               {page}
             </span>
             <Button
@@ -711,7 +266,7 @@ td.r{font-weight:600;text-align:right}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
             >
-              ›
+              Next
             </Button>
           </div>
         </div>
@@ -720,133 +275,89 @@ td.r{font-weight:600;text-align:right}
       <ConfirmDialog
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
-        onConfirm={onDelete}
-        title="Are you sure?"
-        description="Want to delete this record from history. If deleted it will not show again on your dashboard."
-        confirmText="Delete"
-        danger
-        loading={delLoading}
-      />
-
-      <ConfirmDialog
-        open={confirmBulk}
-        onClose={() => setConfirmBulk(false)}
-        onConfirm={onBulkDelete}
-        title={`Remove ${selected.size} record${selected.size === 1 ? "" : "s"}?`}
-        description="The selected records will no longer appear in your history."
+        onConfirm={deleteRecord}
+        title="Remove record?"
+        description="The selected record will no longer appear in this history view."
         confirmText="Remove"
         danger
-        loading={bulkLoading}
+        loading={deleteLoading}
       />
 
-      <Modal open={showWithdraw} onClose={() => setShowWithdraw(false)} hideClose size="sm">
-        <div className="text-left">
-          <button
-            type="button"
-            onClick={() => setShowWithdraw(false)}
-            className="h-9 w-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center mb-3 hover:bg-slate-200"
-          >
-            <ArrowLeftIcon size={16} />
-          </button>
-          <h2 className="text-2xl font-bold text-slate-900">Withdraw Funds</h2>
-          <p className="text-sm text-slate-500">
-            Paid out via {method?.methodType === "paypal" ? "PayPal" : "bank transfer"} (Hyperwallet)
-          </p>
-
-          <div className="bg-sky-50 rounded-xl p-4 mt-4 space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-700">Available Balance</span>
-              <span className="font-bold text-emerald-600">
-                {fmtCredits(balance)} <span className="text-slate-400 font-normal">≈ {fmtCurrency(balanceUsd)}</span>
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-700">Minimum Withdrawal</span>
-              <span className="font-bold text-slate-900">{minCredits} credits</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-700">Payout rate</span>
-              <span className="font-bold text-slate-900">{fmtCurrency(rate)} / credit</span>
-            </div>
-          </div>
-
-          <label className="block mt-4">
-            <span className="block text-sm font-medium text-slate-700 mb-1.5">
-              Enter withdrawal amount (credits)
-            </span>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={`e.g. ${minCredits}`}
-              className="w-full h-11 px-4 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0a7a90]/20 focus:border-[#0a7a90]"
-              min={minCredits}
-            />
-            {Number(amount) > 0 && (
-              <span className="block mt-1 text-xs text-slate-500">
-                You will receive ≈ {fmtCurrency(amountUsd)} {payoutCurrency}
-              </span>
-            )}
-          </label>
-
-          <div className="mt-3">
-            <div className="text-sm font-medium text-slate-700 mb-1.5">Payout account</div>
-            {method?.hasMethod ? (
-              <div className="bg-sky-50 rounded-lg p-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="h-8 w-8 rounded bg-white text-[#0a7a90] flex items-center justify-center">
-                    {method.methodType === "paypal" ? "🅿️" : "🏦"}
-                  </span>
-                  <div>
-                    <div className="font-medium text-slate-900">
-                      {method.methodLabel || (method.methodType === "paypal" ? "PayPal" : "Bank account")}
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      {method.verified ? "Connected" : "Pending"} · {method.currency}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowWithdraw(false);
-                  setShowPayoutMethod(true);
-                }}
-                className="w-full text-left bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 hover:bg-amber-100"
-              >
-                No payout method yet — click to add a bank account or PayPal.
-              </button>
-            )}
-          </div>
-
-          <Button
-            onClick={onWithdraw}
-            loading={withdrawing}
-            disabled={!method?.hasMethod}
-            className="w-full mt-4"
-            size="lg"
-          >
-            Withdraw
-          </Button>
-          <p className="text-[11px] text-slate-500 text-center mt-2">
-            Payouts processed within 2-5 business days
-          </p>
-        </div>
-      </Modal>
-
-      {showPayoutMethod && (
+      {showPayoutMethod ? (
         <PayoutMethodModal
           data={payout}
           onClose={() => setShowPayoutMethod(false)}
-          onChanged={() => {
-            loadPayout();
-            loadOverview();
-          }}
+          onChanged={loadPayout}
         />
-      )}
+      ) : null}
     </div>
+  );
+}
+
+function ProcessStep({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-xl bg-slate-50 p-4">
+      <div className="text-sm font-semibold text-slate-900">{title}</div>
+      <div className="mt-1 text-xs leading-5 text-slate-500">{text}</div>
+    </div>
+  );
+}
+
+function ServiceRow({ item, onDelete }: { item: TransactionDoc; onDelete: () => void }) {
+  const client = typeof item.user === "object" ? item.user : undefined;
+  const session = typeof item.session === "object" ? item.session : undefined;
+  const isTip = item.type === "advisor_tip";
+  return (
+    <tr className="border-b border-slate-100 last:border-0">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Avatar name={client?.name || "Client"} src={client?.profilePhoto} size={28} />
+          <span className="font-medium text-slate-900">{client?.name || "Client"}</span>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-slate-700">
+        <div className="font-medium">{isTip ? "Tip" : serviceLabel(session?.type)}</div>
+        {session?.sessionCode ? <div className="text-xs text-slate-400">{session.sessionCode}</div> : null}
+      </td>
+      <td className="px-4 py-3 text-slate-600">{session?.durationMinutes ? fmtMinutes(session.durationMinutes) : "-"}</td>
+      <td className="px-4 py-3 text-slate-600">{fmtDateTime(item.createdAt)}</td>
+      <td className="px-4 py-3 text-right">
+        <IconButton onClick={onDelete} />
+      </td>
+    </tr>
+  );
+}
+
+function PayoutRow({ item, onDelete }: { item: TransactionDoc; onDelete: () => void }) {
+  return (
+    <tr className="border-b border-slate-100 last:border-0">
+      <td className="px-4 py-3 font-medium text-slate-900">{item.description || "Advisor payout"}</td>
+      <td className="px-4 py-3 capitalize text-slate-600">
+        {(item.withdrawalMethod || "Payout method").replace(/_/g, " ")}
+      </td>
+      <td className="px-4 py-3">
+        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold capitalize text-slate-700">
+          {item.withdrawalStatus || item.status}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-slate-600">{fmtDateTime(item.createdAt)}</td>
+      <td className="px-4 py-3 text-right">
+        <IconButton onClick={onDelete} />
+      </td>
+    </tr>
+  );
+}
+
+function IconButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Remove from history"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100"
+    >
+      <TrashIcon size={14} />
+    </button>
   );
 }
 
@@ -878,240 +389,103 @@ function PayoutMethodModal({
   }, [data?.advisor]);
 
   const refresh = async () => {
-    try {
-      const r = await api.get<PayoutAccountResponse>("/wallet/advisor/payout-account");
-      setAcct(r.data?.account || null);
-    } catch {
-      // ignore
-    }
+    const r = await api.get<PayoutAccountResponse>("/wallet/advisor/payout-account");
+    if (r.data?.account) setAcct(r.data.account);
     onChanged();
   };
 
-  const run = async (key: string, fn: () => Promise<unknown>, ok: string) => {
-    setBusy(key);
+  const payoutProfile = () => ({
+    dateOfBirth,
+    addressLine1,
+    city,
+    stateProvince,
+    country,
+    postalCode,
+  });
+
+  const run = async (label: string, fn: () => Promise<unknown>, success: string) => {
+    setBusy(label);
     try {
       await fn();
-      toast.success(ok);
+      toast.success(success);
       await refresh();
-      return true;
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed");
-      return false;
+      toast.error(err instanceof ApiError ? err.message : "Action failed");
     } finally {
       setBusy(null);
     }
   };
 
-  const removeMethod = () =>
-    run("remove", () => api.delete("/wallet/advisor/payout-account/method"), "Payout method removed");
-
-  const profileComplete = [dateOfBirth, addressLine1, city, stateProvince, country, postalCode].every(
-    (value) => value.trim().length > 0
-  );
-
   return (
     <Modal open onClose={onClose} title="Set up payouts" size="lg">
       <div className="space-y-5">
         <p className="text-sm text-slate-500">
-          Receive approved earnings in your bank account or PayPal. Your credits are converted to{" "}
-          {data?.config.payoutCurrency || "USD"} at{" "}
-          {fmtCurrency(data?.config.payoutCreditUsdRate ?? 1)} per credit.
+          Connect a payout destination so approved payouts can be sent to your bank account or PayPal.
         </p>
 
         {!acct?.configured ? (
-          <div className="rounded-xl border border-slate-200 p-4">
-            <div className="mb-4">
-              <div className="text-xs font-medium uppercase tracking-wide text-[#0a7a90]">Step 1 of 2</div>
-              <div className="mt-1 font-semibold text-slate-800">Confirm your legal details</div>
-              <div className="mt-1 text-sm text-slate-500">
-                Hyperwallet needs these details once to create your payout profile. Enter them exactly as
-                they appear on your bank or PayPal account. All fields are required.
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-              <Input
-                label="Date of birth"
-                type="date"
-                value={dateOfBirth}
-                onChange={(event) => setDateOfBirth(event.target.value)}
-              />
-              <Input
-                label="Street address"
-                value={addressLine1}
-                onChange={(event) => setAddressLine1(event.target.value)}
-                placeholder="123 Main Street"
-              />
-              <Input
-                label="City"
-                value={city}
-                onChange={(event) => setCity(event.target.value)}
-                placeholder="Your city"
-              />
-              <Input
-                label="State / province"
-                value={stateProvince}
-                onChange={(event) => setStateProvince(event.target.value)}
-                placeholder="CA or Dhaka"
-              />
+          <div className="rounded-xl bg-slate-50 p-4">
+            <div className="mb-3 text-sm font-semibold text-slate-800">Payout profile</div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Input label="Date of birth" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
+              <Input label="Address" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="Street address" />
+              <Input label="City" value={city} onChange={(e) => setCity(e.target.value)} />
+              <Input label="State / Province" value={stateProvince} onChange={(e) => setStateProvince(e.target.value)} />
               <label className="block">
-                <span className="block mb-1.5 text-sm font-medium text-slate-700">Country</span>
+                <span className="mb-1.5 block text-sm font-medium text-slate-700">Country</span>
                 <Combobox
-                  options={countries.map((item) => ({ value: item.iso2, label: item.name }))}
+                  options={countries.map((c) => ({ value: c.iso2, label: c.name }))}
                   value={country}
                   onChange={setCountry}
                   placeholder="Select country"
-                  searchPlaceholder="Search countries..."
-                  emptyText="No country found."
+                  searchPlaceholder="Search country"
                 />
               </label>
-              <Input
-                label="Postal code"
-                value={postalCode}
-                onChange={(event) => setPostalCode(event.target.value)}
-                placeholder="Your postal code"
-              />
+              <Input label="Postal code" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
             </div>
-            <div className="flex items-end justify-between gap-4 border-t border-slate-200 pt-4 flex-wrap">
-              <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-[#0a7a90]">Step 2 of 2</div>
-                <div className="mt-1 text-sm font-semibold text-slate-800">Choose where you get paid</div>
-                <div className="mt-1 max-w-md text-xs text-slate-500">
-                  Continue to Hyperwallet&apos;s secure form to add a bank account or PayPal. Your account
-                  details are not stored in this app.
-                </div>
-              </div>
-              <div className="w-full text-left sm:w-auto sm:text-right">
-                <HyperwalletDropInButton
-                  tokenPath="/wallet/advisor/payout-account/drop-in-token"
-                  syncPath="/wallet/advisor/payout-account/sync-method"
-                  beforeLaunch={() =>
-                    api
-                      .post("/wallet/advisor/payout-account/setup", {
-                        dateOfBirth,
-                        addressLine1,
-                        city,
-                        stateProvince,
-                        country,
-                        postalCode,
-                      })
-                      .then(() => undefined)
-                  }
-                  disabled={!profileComplete}
-                  label="Continue to secure setup"
-                  onConnected={refresh}
-                />
-                {!profileComplete && (
-                  <div className="mt-1.5 text-xs text-amber-700">Complete all fields to continue.</div>
-                )}
-              </div>
-            </div>
+            <Button
+              className="mt-4"
+              loading={busy === "setup"}
+              onClick={() => run("setup", () => api.post("/wallet/advisor/payout-account/setup", payoutProfile()), "Payout profile ready")}
+            >
+              Create payout profile
+            </Button>
           </div>
         ) : (
-          <>
-            <div className="rounded-xl border border-slate-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">
-                    Active payout method
-                  </div>
-                  {acct.hasMethod ? (
-                    <div className="font-medium text-slate-900">
-                      {acct.methodLabel || acct.methodType} ({acct.currency})
-                    </div>
-                  ) : (
-                    <div className="text-sm text-slate-500">No method attached yet.</div>
-                  )}
-                </div>
-                {acct.hasMethod && (
-                  <Button variant="ghost" size="sm" loading={busy === "remove"} onClick={removeMethod}>
-                    <TrashIcon size={15} /> Remove
-                  </Button>
-                )}
-              </div>
+          <div className="rounded-xl bg-sky-50 p-4">
+            <div className="text-sm font-semibold text-slate-800">Active payout profile</div>
+            <div className="mt-1 text-sm text-slate-600">
+              {acct.methodLabel || (acct.hasMethod ? "Payout method connected" : "No destination selected")}
             </div>
-
-            <div className="rounded-xl border border-slate-200 p-4">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <div className="text-sm font-medium text-slate-800">
-                    {acct.hasMethod ? "Change payout destination" : "Choose payout destination"}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    Opens Hyperwallet&apos;s secure form. Available methods depend on your country.
-                  </div>
-                </div>
-                <HyperwalletDropInButton
-                  tokenPath="/wallet/advisor/payout-account/drop-in-token"
-                  syncPath="/wallet/advisor/payout-account/sync-method"
-                  label={acct.hasMethod ? "Change payout method" : "Choose payout method"}
-                  onConnected={refresh}
-                />
-              </div>
-            </div>
-          </>
+          </div>
         )}
+
+        {acct?.configured ? (
+          <div className="rounded-xl border border-slate-200 p-4">
+            <div className="mb-3 text-sm font-semibold text-slate-800">
+              {acct.hasMethod ? "Change payout destination" : "Choose payout destination"}
+            </div>
+            <HyperwalletDropInButton
+              tokenPath="/wallet/advisor/payout-account/drop-in-token"
+              syncPath="/wallet/advisor/payout-account/sync-method"
+              label={acct.hasMethod ? "Change payout method" : "Choose payout method"}
+              onConnected={async () => {
+                await refresh();
+              }}
+            />
+          </div>
+        ) : null}
+
+        {acct?.hasMethod ? (
+          <Button
+            variant="danger"
+            loading={busy === "remove"}
+            onClick={() => run("remove", () => api.delete("/wallet/advisor/payout-account/method"), "Payout method removed")}
+          >
+            Remove payout method
+          </Button>
+        ) : null}
       </div>
     </Modal>
   );
 }
-
-function SummaryStat({
-  tone,
-  icon,
-  label,
-  value,
-  chip,
-}: {
-  tone: "sky" | "rose" | "emerald";
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  chip: string;
-}) {
-  const cls: Record<string, string> = {
-    sky: "bg-sky-50 border-sky-100",
-    rose: "bg-rose-50 border-rose-100",
-    emerald: "bg-emerald-50 border-emerald-100",
-  };
-  const chipCls: Record<string, string> = {
-    sky: "bg-white text-sky-700",
-    rose: "bg-white text-rose-700",
-    emerald: "bg-white text-emerald-700",
-  };
-  return (
-    <div className={`rounded-xl border p-4 ${cls[tone]}`}>
-      <div className="flex items-start justify-between">
-        <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center text-slate-700">
-          {icon}
-        </div>
-        <span
-          className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${chipCls[tone]}`}
-        >
-          <TrendIcon size={10} className="inline-block mr-1" />
-          {chip}
-        </span>
-      </div>
-      <div className="text-sm text-slate-600 mt-2">{label}</div>
-      <div className="text-2xl font-bold text-slate-900 mt-1">{value}</div>
-    </div>
-  );
-}
-
-function Badge2({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-emerald-50 px-2 h-7 text-[11px] font-semibold text-emerald-700">
-      {icon}
-      <span className="truncate text-slate-500 font-normal">{label}</span>
-      <span className="font-bold whitespace-nowrap">{value}</span>
-    </span>
-  );
-}
-

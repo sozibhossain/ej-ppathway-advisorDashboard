@@ -46,7 +46,6 @@ import type {
 
 type TabKey =
   | "personal"
-  | "pricing"
   | "performance"
   | "promotion";
 
@@ -195,19 +194,12 @@ function setDaySchedule(
 }
 
 function tabFromQuery(value: string | null): TabKey {
-  if (value === "pricing") return "pricing";
   if (value === "reviews") return "performance";
   if (value === "promotion") return "promotion";
   return "personal";
 }
 
 function profileHeading(tab: TabKey) {
-  if (tab === "pricing") {
-    return {
-      title: "Pricing",
-      description: "View the global session rates set by admin.",
-    };
-  }
   if (tab === "performance") {
     return {
       title: "Reviews",
@@ -339,7 +331,6 @@ export default function ProfilePage() {
           <ExpertiseTab p={p} setP={setP} />
         </div>
       )}
-      {tab === "pricing" && p && <PricingTab p={p} />}
       {tab === "performance" && (
         <div className="space-y-6">
           <PerformanceTab />
@@ -1006,7 +997,7 @@ function SuggestionRow({
   );
 }
 
-function PricingTab({
+function RemovedRatesPanel({
   p,
 }: {
   p: AdvisorProfile;
@@ -1015,34 +1006,34 @@ function PricingTab({
     <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-5">
       <div>
         <h3 className="font-bold text-slate-900 mb-4">
-          Credit Pricing
+          Admin-managed rates
         </h3>
         <h4 className="text-sm font-semibold text-slate-700 mb-3">
-          Credits per minute
+          Rates per minute
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <ReadOnlyPricingCard
-            label="Chat credits/min"
+          <ReadOnlyRateCard
+            label="Chat"
             value={p.pricing.chatPerMin}
           />
-          <ReadOnlyPricingCard
-            label="Audio call credits/min"
+          <ReadOnlyRateCard
+            label="Audio call"
             value={p.pricing.callPerMin}
           />
-          <ReadOnlyPricingCard
-            label="Video call credits/min"
+          <ReadOnlyRateCard
+            label="Video call"
             value={p.pricing.videoPerMin}
           />
         </div>
         <p className="text-xs text-slate-500 mt-3">
-          Pricing is managed by admin. Contact support if these rates need review.
+          Rates are managed by admin. Contact support if these need review.
         </p>
       </div>
     </div>
   );
 }
 
-function ReadOnlyPricingCard({
+function ReadOnlyRateCard({
   label,
   value,
 }: {
@@ -1054,7 +1045,7 @@ function ReadOnlyPricingCard({
       <div className="text-sm font-semibold text-slate-700">{label}</div>
       <div className="mt-2 text-2xl font-bold text-slate-900">
         {Number(value || 0).toLocaleString()}{" "}
-        <span className="text-sm font-semibold text-slate-500">credits/min</span>
+        <span className="text-sm font-semibold text-slate-500">per min</span>
       </div>
     </div>
   );
@@ -1802,7 +1793,7 @@ function PerformanceTab() {
                       <li>Featured placement</li>
                       <li>VIP support</li>
                       <li>Gold badge</li>
-                      <li>Reduced commission</li>
+                      <li>Priority support</li>
                     </>
                   )}
                 </ul>

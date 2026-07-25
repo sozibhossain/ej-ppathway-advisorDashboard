@@ -146,6 +146,7 @@ export type SessionDoc = {
   status: SessionStatus;
   scheduledFor?: string;
   durationMinutes?: number;
+  actualDurationSec?: number;
   instantStart?: boolean;
   livekitRoom?: string;
   startedAt?: string;

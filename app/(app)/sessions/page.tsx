@@ -6,9 +6,9 @@ import { api, ApiError } from "../../lib/api";
 import { useToast } from "../../lib/toast";
 import {
   fmtDate,
+  fmtDuration,
   fmtMinutes,
   fmtTime,
-  fmtCredits,
   fmtSessionTimeLeft,
   isSessionTimeActive,
 } from "../../lib/format";
@@ -38,6 +38,15 @@ const populated = (
 ): { _id: string; name: string; profilePhoto?: string } => {
   if (!ref || typeof ref === "string") return { _id: "", name: "Client" };
   return ref;
+};
+
+const completedDurationLabel = (session: SessionDoc) => {
+  if (session.actualDurationSec && session.actualDurationSec > 0) {
+    return fmtDuration(session.actualDurationSec);
+  }
+  return session.durationMinutes
+    ? `${String(session.durationMinutes).padStart(2, "0")}:00`
+    : "—";
 };
 
 const typeIcon = (t: SessionType) => {
@@ -428,7 +437,7 @@ export default function SessionsPage() {
         ) : null}
 
         <div className="overflow-x-auto -mx-5 px-5">
-          <table className={`w-full text-sm ${activeTab === "completed" ? "min-w-[900px]" : "min-w-[760px]"}`}>
+          <table className={`w-full text-sm ${activeTab === "completed" ? "min-w-[820px]" : "min-w-[760px]"}`}>
             <thead>
               <tr className="text-xs uppercase text-slate-500 border-b border-slate-200">
                 <th className="px-5 py-3 text-left w-10">
@@ -448,9 +457,6 @@ export default function SessionsPage() {
                   <>
                     <th className="px-3 py-3 text-left font-semibold">
                       Duration
-                    </th>
-                    <th className="px-3 py-3 text-left font-semibold">
-                      Earned
                     </th>
                     <th className="px-3 py-3 text-left font-semibold">
                       Rating
@@ -526,12 +532,7 @@ export default function SessionsPage() {
                       {activeTab === "completed" && (
                         <>
                           <td className="px-3 py-3 text-slate-700">
-                            {s.durationMinutes
-                              ? `${String(s.durationMinutes).padStart(2, "0")}:00`
-                              : "—"}
-                          </td>
-                          <td className="px-3 py-3 font-semibold text-emerald-600">
-                            {fmtCredits(s.advisorPayout || s.chargedAmount)}
+                            {completedDurationLabel(s)}
                           </td>
                           <td className="px-3 py-3">
                             {typeof s.rating === "number" ? (

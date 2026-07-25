@@ -266,7 +266,7 @@ export default function SettingsPage() {
               />
               <PrefRow
                 label="Payment updates"
-                description="Notify me about payouts and earnings"
+                description="Notify me about payout updates"
                 checked={!!prefs.paymentUpdates}
                 onChange={(v) => setPrefs({ ...prefs, paymentUpdates: v })}
               />

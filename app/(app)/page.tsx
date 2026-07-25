@@ -11,7 +11,6 @@ import {
   fmtTime,
   fmtDuration,
   tierLabel,
-  fmtCredits,
   fmtSessionTimeLeft,
   isSessionTimeActive,
 } from "../lib/format";
@@ -149,7 +148,7 @@ export default function DashboardHome() {
   const upcoming = data?.upcoming || [];
   const reviews = data?.recentReviews || [];
 
-  // Earnings curve: 7 days, _id 1=Sunday → 7=Saturday
+  // Activity curve: 7 days, _id 1=Sunday -> 7=Saturday
   const curve = (data?.earningsCurve || []).reduce(
     (acc, c) => {
       acc[c._id] = c.total;
@@ -215,8 +214,8 @@ export default function DashboardHome() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
-          title={`Earnings ${rangeLabel}`}
-          value={fmtCredits(data?.earningsToday || 0)}
+          title={`Completed Services ${rangeLabel}`}
+          value={fmtNumber(data?.stats?.completedSessions || 0).padStart(2, "0")}
           trend="+14%"
           tone="emerald"
           icon={<TrendIcon size={18} />}
@@ -270,7 +269,7 @@ export default function DashboardHome() {
                       {populated(ongoing.user).name}
                     </div>
                     <div className="text-xs text-slate-500">
-                      {ongoing.type} • {fmtCredits(ongoing.ratePerMin)}/min
+                      {ongoing.type} session
                     </div>
                     <div className="mt-1">
                       <Badge tone="success">
@@ -298,24 +297,17 @@ export default function DashboardHome() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="grid grid-cols-1 gap-3 mt-4">
                 <div className="rounded-xl border border-slate-200 p-3">
                   <div className="text-lg font-bold text-slate-900">
-                    {fmtCredits(ongoing.ratePerMin)}
-                    <span className="text-sm font-normal text-slate-500">
-                      /min
-                    </span>
+                    {fmtDuration(
+                      ongoing.startedAt
+                        ? Math.floor((Date.now() - new Date(ongoing.startedAt).getTime()) / 1000)
+                        : 0
+                    )}
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    Rate per minute
-                  </div>
-                </div>
-                <div className="rounded-xl border border-slate-200 p-3">
-                  <div className="text-lg font-bold text-slate-900">
-                    {fmtCredits(ongoing.chargedAmount)}
-                  </div>
-                  <div className="text-[10px] text-slate-500">
-                    Earning this session
+                    Current duration
                   </div>
                 </div>
               </div>
@@ -402,17 +394,17 @@ export default function DashboardHome() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="font-semibold text-slate-900">Earning Overview</h3>
+            <h3 className="font-semibold text-slate-900">Service Activity</h3>
             <Badge tone="primary">Weekly</Badge>
           </div>
           <p className="text-xs text-slate-500 mb-4">
-            Your weekly earnings growth trajectory.
+            Your weekly completed-service activity.
           </p>
 
           <div className="h-56 relative">
             <svg className="w-full h-full" viewBox="0 0 700 220" preserveAspectRatio="none">
               <defs>
-                <linearGradient id="earnings-grad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="activity-grad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#0a7a90" stopOpacity="0.45" />
                   <stop offset="100%" stopColor="#0a7a90" stopOpacity="0" />
                 </linearGradient>
@@ -439,7 +431,7 @@ export default function DashboardHome() {
                 const areaPath = `${path} L ${padX + innerW} ${padY + innerH} L ${padX} ${padY + innerH} Z`;
                 return (
                   <>
-                    <path d={areaPath} fill="url(#earnings-grad)" />
+                    <path d={areaPath} fill="url(#activity-grad)" />
                     <path
                       d={path}
                       stroke="#0a7a90"
