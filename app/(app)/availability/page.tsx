@@ -571,7 +571,10 @@ export default function AvailabilityPage() {
     setProfile({ ...profile, isOnline: next });
     setOnlineSaving(true);
     try {
-      const res = await api.patch("/advisor/profile", { isOnline: next });
+      const res = await api.patch<AdvisorProfile>("/advisor/profile/online", { isOnline: next });
+      if (res.data) {
+        setProfile((current) => current ? { ...current, ...res.data } : res.data || current);
+      }
       toast.success(res.message || (next ? "You are online" : "You are offline"));
       refreshMe();
     } catch (err) {
