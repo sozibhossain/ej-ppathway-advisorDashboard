@@ -205,10 +205,13 @@ export type TransactionDoc = {
   session?: { _id: string; sessionCode?: string; type?: SessionType; durationMinutes?: number } | string;
   amount: number;
   amountUsd?: number;
+  displayAmountUsd?: number;
+  currency?: string;
   description?: string;
   withdrawalStatus?: string;
   withdrawalMethod?: string;
   withdrawalRequestedAt?: string;
+  withdrawalPaidAt?: string;
   createdAt: string;
 };
 
@@ -220,19 +223,25 @@ export type WalletDoc = {
   earningsBalance?: number;
   pendingPayouts?: number;
   totalEarned?: number;
+  tipEarningsBalanceUsd?: number;
+  pendingTipPayoutUsd?: number;
+  totalTipEarnedUsd?: number;
+  totalTipWithdrawnUsd?: number;
 };
 
 export type DashboardData = {
-  earningsToday: number;
+  dashboardRange: "today" | "week" | "month";
+  completedSessionsInRange: number;
+  sessionMinutesInRange: number;
+  totalSessionMinutes: number;
   activeSessions: number;
   pendingRequests: number;
   ratings: number;
   tier: Tier;
-  walletBalance: number;
   ongoing?: SessionDoc | null;
   upcoming: SessionDoc[];
   recentReviews: ReviewDoc[];
-  earningsCurve: { _id: number; total: number }[];
+  serviceActivityCurve: { _id: number; total: number }[];
   stats: {
     avgRating: number;
     repeatClientRate: number;
@@ -259,14 +268,10 @@ export type PerformanceData = {
 };
 
 export type EarningsOverview = {
-  wallet: WalletDoc;
-  todayEarnings: number;
-  todayWithdrawals: number;
-  revenueCurve: { _id: number; total: number }[];
-  grossEarnings: number;
-  platformFee: number;
-  netEarnings: number;
-  totalWithdrawn: number;
+  todaySessionMinutes: number;
+  totalSessionMinutes: number;
+  totalTipEarnedUsd: number;
+  totalPaidUsd: number;
 };
 
 export type PayoutAccountInfo = {
@@ -287,12 +292,13 @@ export type PayoutAccountResponse = {
     state?: string;
     city?: string;
   };
-  config: {
-    payoutCreditUsdRate: number;
-    payoutCurrency: string;
-    minPayoutCredits: number;
+  summary: {
+    totalSessionMinutes: number;
+    completedSessions: number;
+    totalTipEarnedUsd: number;
+    totalTips: number;
+    totalPaidUsd: number;
   };
-  balance: { availableCredits: number; availableUsd: number };
 };
 
 export type PromotionPlanDef = {

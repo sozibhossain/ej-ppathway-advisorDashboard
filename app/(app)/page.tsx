@@ -10,6 +10,7 @@ import {
   fmtNumber,
   fmtTime,
   fmtDuration,
+  fmtMinutes,
   tierLabel,
   fmtSessionTimeLeft,
   isSessionTimeActive,
@@ -149,7 +150,7 @@ export default function DashboardHome() {
   const reviews = data?.recentReviews || [];
 
   // Activity curve: 7 days, _id 1=Sunday -> 7=Saturday
-  const curve = (data?.earningsCurve || []).reduce(
+  const curve = (data?.serviceActivityCurve || []).reduce(
     (acc, c) => {
       acc[c._id] = c.total;
       return acc;
@@ -212,18 +213,24 @@ export default function DashboardHome() {
         </select>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           title={`Completed Services ${rangeLabel}`}
-          value={fmtNumber(data?.stats?.completedSessions || 0).padStart(2, "0")}
-          trend="+14%"
+          value={fmtNumber(data?.completedSessionsInRange || 0).padStart(2, "0")}
+          subtitle={`${fmtMinutes(data?.sessionMinutesInRange || 0)} in this period`}
           tone="emerald"
           icon={<TrendIcon size={18} />}
         />
         <StatCard
+          title="Total Session Minutes"
+          value={fmtMinutes(data?.totalSessionMinutes || 0)}
+          subtitle="All completed sessions"
+          tone="amber"
+          icon={<ClockIcon size={18} />}
+        />
+        <StatCard
           title="Active Sessions"
           value={fmtNumber(data?.activeSessions || 0).padStart(2, "0")}
-          trend="+20%"
           tone="blue"
           icon={<ZapIcon size={18} />}
         />
@@ -236,7 +243,6 @@ export default function DashboardHome() {
             </div>
           }
           subtitle={`${tierLabel(data?.tier)} Advisor`}
-          trend="+5%"
           tone="rose"
           icon={<AwardIcon size={18} />}
         />
@@ -398,7 +404,7 @@ export default function DashboardHome() {
             <Badge tone="primary">Weekly</Badge>
           </div>
           <p className="text-xs text-slate-500 mb-4">
-            Your weekly completed-service activity.
+            Minutes completed across your sessions during the last seven days.
           </p>
 
           <div className="h-56 relative">
