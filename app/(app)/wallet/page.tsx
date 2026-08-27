@@ -10,14 +10,36 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Combobox } from "../../components/ui/Combobox";
 import { Skeleton } from "../../components/ui/Skeleton";
-import { Modal, ConfirmDialog } from "../../components/ui/Modal";
+import { Modal } from "../../components/ui/Modal";
 import { HyperwalletDropInButton } from "../../components/payout/HyperwalletDropInButton";
 import { useCountries } from "../../lib/countries";
-import { WalletIcon, TrashIcon } from "../../components/Icons";
+import { WalletIcon } from "../../components/Icons";
 import type { PayoutAccountResponse, TransactionDoc } from "../../lib/types";
 
 type Range = "all" | "today" | "week" | "month";
-type Tab = "services" | "payouts";
+type Tab = "services" | "tips" | "payouts";
+
+type HistoryUser = { _id: string; name: string; profilePhoto?: string };
+
+type SessionHistoryItem = {
+  _id: string;
+  sessionCode?: string;
+  user?: HistoryUser | string;
+  type?: "chat" | "call" | "video";
+  durationMinutes?: number;
+  actualDurationSec?: number;
+  scheduledFor?: string;
+  endedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type HistoryItem = SessionHistoryItem | TransactionDoc;
+
+const formatUsd = (value?: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    Number(value || 0),
+  );
 
 const serviceLabel = (type?: string) => {
   if (type === "call") return "Audio call";
@@ -33,12 +55,10 @@ export default function WalletPage() {
     searchParams.get("tab") === "withdrawals" ? "payouts" : "services",
   );
   const [range, setRange] = useState<Range>("all");
-  const [items, setItems] = useState<TransactionDoc[]>([]);
+  const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [confirmDelete, setConfirmDelete] = useState<TransactionDoc | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [payout, setPayout] = useState<PayoutAccountResponse | null>(null);
   const [showPayoutMethod, setShowPayoutMethod] = useState(false);
   const limit = 8;
@@ -58,10 +78,15 @@ export default function WalletPage() {
   const loadHistory = async () => {
     setLoading(true);
     try {
-      const path = tab === "services" ? "/wallet/advisor/earnings" : "/wallet/advisor/withdrawals";
+      const path =
+        tab === "services"
+          ? "/wallet/advisor/sessions"
+          : tab === "tips"
+            ? "/wallet/advisor/tips"
+            : "/wallet/advisor/withdrawals";
       const query: Record<string, string | number> = { page, limit };
-      if (tab === "services" && range !== "all") query.range = range;
-      const r = await api.get<TransactionDoc[]>(path, query);
+      if (tab !== "payouts" && range !== "all") query.range = range;
+      const r = await api.get<HistoryItem[]>(path, query);
       setItems(r.data || []);
       setTotal(r.meta?.total || 0);
     } catch (err) {
@@ -85,22 +110,6 @@ export default function WalletPage() {
     loadHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, range, page]);
-
-  const deleteRecord = async () => {
-    if (!confirmDelete) return;
-    setDeleteLoading(true);
-    try {
-      const base = tab === "services" ? "/wallet/advisor/earnings" : "/wallet/advisor/withdrawals";
-      await api.delete(`${base}/${confirmDelete._id}`);
-      toast.success("Removed from history");
-      setConfirmDelete(null);
-      loadHistory();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Delete failed");
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -147,9 +156,29 @@ export default function WalletPage() {
         </div>
       </div>
 
+      {payout ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <SummaryCard
+            label="Total session minutes"
+            value={fmtMinutes(payout.summary.totalSessionMinutes)}
+            detail={`${payout.summary.completedSessions} completed sessions`}
+          />
+          <SummaryCard
+            label="Net tips received"
+            value={formatUsd(payout.summary.totalTipEarnedUsd)}
+            detail={`${payout.summary.totalTips} tips from users`}
+          />
+          <SummaryCard
+            label="Total paid by admin"
+            value={formatUsd(payout.summary.totalPaidUsd)}
+            detail="Completed payouts only"
+          />
+        </div>
+      ) : null}
+
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="grid w-full grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 text-sm min-[460px]:w-auto">
+          <div className="grid w-full grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1 text-sm min-[560px]:w-auto">
             <button
               type="button"
               onClick={() => {
@@ -165,6 +194,18 @@ export default function WalletPage() {
             <button
               type="button"
               onClick={() => {
+                setTab("tips");
+                setPage(1);
+              }}
+              className={`h-9 rounded-md px-3 font-semibold ${
+                tab === "tips" ? "bg-[#0a7a90] text-white" : "text-slate-600 hover:bg-white"
+              }`}
+            >
+              Tip History
+            </button>
+            <button
+              type="button"
+              onClick={() => {
                 setTab("payouts");
                 setPage(1);
               }}
@@ -176,7 +217,7 @@ export default function WalletPage() {
             </button>
           </div>
 
-          {tab === "services" ? (
+          {tab !== "payouts" ? (
             <div className="grid w-full grid-cols-4 gap-1 rounded-lg bg-slate-100 p-1 text-xs min-[520px]:w-auto">
               {(["all", "today", "week", "month"] as Range[]).map((r) => (
                 <button
@@ -208,6 +249,13 @@ export default function WalletPage() {
                     <th className="px-4 py-3 font-semibold">Duration</th>
                     <th className="px-4 py-3 font-semibold">Date & Time</th>
                   </>
+                ) : tab === "tips" ? (
+                  <>
+                    <th className="px-4 py-3 font-semibold">User</th>
+                    <th className="px-4 py-3 font-semibold">Net Tip</th>
+                    <th className="px-4 py-3 font-semibold">Session</th>
+                    <th className="px-4 py-3 font-semibold">Date & Time</th>
+                  </>
                 ) : (
                   <>
                     <th className="px-4 py-3 font-semibold">Payout</th>
@@ -216,14 +264,13 @@ export default function WalletPage() {
                     <th className="px-4 py-3 font-semibold">Date & Time</th>
                   </>
                 )}
-                <th className="px-4 py-3 text-right font-semibold">Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, row) => (
                   <tr key={row} className="border-b border-slate-100">
-                    {Array.from({ length: 5 }).map((__, col) => (
+                    {Array.from({ length: 4 }).map((__, col) => (
                       <td key={col} className="px-4 py-4">
                         <Skeleton className="h-3 w-full max-w-32" />
                       </td>
@@ -232,16 +279,18 @@ export default function WalletPage() {
                 ))
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-500">
+                  <td colSpan={4} className="py-10 text-center text-slate-500">
                     No records yet
                   </td>
                 </tr>
               ) : (
                 items.map((item) =>
                   tab === "services" ? (
-                    <ServiceRow key={item._id} item={item} onDelete={() => setConfirmDelete(item)} />
+                    <ServiceRow key={item._id} item={item as SessionHistoryItem} />
+                  ) : tab === "tips" ? (
+                    <TipRow key={item._id} item={item as TransactionDoc} />
                   ) : (
-                    <PayoutRow key={item._id} item={item} onDelete={() => setConfirmDelete(item)} />
+                    <PayoutRow key={item._id} item={item as TransactionDoc} />
                   ),
                 )
               )}
@@ -272,17 +321,6 @@ export default function WalletPage() {
         </div>
       </div>
 
-      <ConfirmDialog
-        open={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        onConfirm={deleteRecord}
-        title="Remove record?"
-        description="The selected record will no longer appear in this history view."
-        confirmText="Remove"
-        danger
-        loading={deleteLoading}
-      />
-
       {showPayoutMethod ? (
         <PayoutMethodModal
           data={payout}
@@ -303,10 +341,26 @@ function ProcessStep({ title, text }: { title: string; text: string }) {
   );
 }
 
-function ServiceRow({ item, onDelete }: { item: TransactionDoc; onDelete: () => void }) {
+function SummaryCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: React.ReactNode;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="mt-2 text-2xl font-bold text-slate-900">{value}</div>
+      <div className="mt-1 text-xs text-slate-500">{detail}</div>
+    </div>
+  );
+}
+
+function ServiceRow({ item }: { item: SessionHistoryItem }) {
   const client = typeof item.user === "object" ? item.user : undefined;
-  const session = typeof item.session === "object" ? item.session : undefined;
-  const isTip = item.type === "advisor_tip";
   return (
     <tr className="border-b border-slate-100 last:border-0">
       <td className="px-4 py-3">
@@ -316,22 +370,47 @@ function ServiceRow({ item, onDelete }: { item: TransactionDoc; onDelete: () => 
         </div>
       </td>
       <td className="px-4 py-3 text-slate-700">
-        <div className="font-medium">{isTip ? "Tip" : serviceLabel(session?.type)}</div>
-        {session?.sessionCode ? <div className="text-xs text-slate-400">{session.sessionCode}</div> : null}
+        <div className="font-medium">{serviceLabel(item.type)}</div>
+        {item.sessionCode ? <div className="text-xs text-slate-400">{item.sessionCode}</div> : null}
       </td>
-      <td className="px-4 py-3 text-slate-600">{session?.durationMinutes ? fmtMinutes(session.durationMinutes) : "-"}</td>
-      <td className="px-4 py-3 text-slate-600">{fmtDateTime(item.createdAt)}</td>
-      <td className="px-4 py-3 text-right">
-        <IconButton onClick={onDelete} />
+      <td className="px-4 py-3 font-semibold text-slate-700">{fmtMinutes(item.durationMinutes)}</td>
+      <td className="px-4 py-3 text-slate-600">
+        {fmtDateTime(item.endedAt || item.scheduledFor || item.createdAt)}
       </td>
     </tr>
   );
 }
 
-function PayoutRow({ item, onDelete }: { item: TransactionDoc; onDelete: () => void }) {
+function TipRow({ item }: { item: TransactionDoc }) {
+  const user = typeof item.user === "object" ? item.user : undefined;
+  const session = typeof item.session === "object" ? item.session : undefined;
   return (
     <tr className="border-b border-slate-100 last:border-0">
-      <td className="px-4 py-3 font-medium text-slate-900">{item.description || "Advisor payout"}</td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Avatar name={user?.name || "User"} src={user?.profilePhoto} size={28} />
+          <span className="font-medium text-slate-900">{user?.name || "User"}</span>
+        </div>
+      </td>
+      <td className="px-4 py-3 font-semibold text-emerald-700">
+        {formatUsd(item.displayAmountUsd)}
+      </td>
+      <td className="px-4 py-3 text-slate-600">
+        <div>{session ? serviceLabel(session.type) : "Session"}</div>
+        {session?.sessionCode ? <div className="text-xs text-slate-400">{session.sessionCode}</div> : null}
+      </td>
+      <td className="px-4 py-3 text-slate-600">{fmtDateTime(item.createdAt)}</td>
+    </tr>
+  );
+}
+
+function PayoutRow({ item }: { item: TransactionDoc }) {
+  return (
+    <tr className="border-b border-slate-100 last:border-0">
+      <td className="px-4 py-3">
+        <div className="font-semibold text-slate-900">{formatUsd(item.amountUsd ?? item.amount)}</div>
+        <div className="text-xs text-slate-400">{item.description || "Advisor payout"}</div>
+      </td>
       <td className="px-4 py-3 capitalize text-slate-600">
         {(item.withdrawalMethod || "Payout method").replace(/_/g, " ")}
       </td>
@@ -340,24 +419,10 @@ function PayoutRow({ item, onDelete }: { item: TransactionDoc; onDelete: () => v
           {item.withdrawalStatus || item.status}
         </span>
       </td>
-      <td className="px-4 py-3 text-slate-600">{fmtDateTime(item.createdAt)}</td>
-      <td className="px-4 py-3 text-right">
-        <IconButton onClick={onDelete} />
+      <td className="px-4 py-3 text-slate-600">
+        {fmtDateTime(item.withdrawalPaidAt || item.createdAt)}
       </td>
     </tr>
-  );
-}
-
-function IconButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Remove from history"
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100"
-    >
-      <TrashIcon size={14} />
-    </button>
   );
 }
 
